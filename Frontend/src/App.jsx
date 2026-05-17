@@ -1,12 +1,14 @@
 import React from 'react';
-import Login from './components/Login';
+import { RouterProvider, AppRoutes } from './routes';
 import './App.css';
 
 function App() {
   return (
-    <div className="app-container">
-      <Login />
-    </div>
+    <RouterProvider>
+      <div className="app-container">
+        <AppRoutes />
+      </div>
+    </RouterProvider>
   );
 }
 

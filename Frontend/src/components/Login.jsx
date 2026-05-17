@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Shield, ArrowRight, CheckCircle2, AlertCircle, Database } from 'lucide-react';
+import { useNavigate } from '../routes';
 import './Login.css';
 
 export default function Login() {
+  const navigate = useNavigate();
   const [role, setRole] = useState('user'); // 'user' or 'admin'
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -46,11 +48,13 @@ export default function Login() {
           type: 'success',
           message: 'Admin Authentication successful! Accessing manager dashboard...',
         });
+        setTimeout(() => navigate('/admin'), 800);
       } else if (role === 'user' && identifier.includes('@')) {
         setStatus({
           type: 'success',
           message: 'Welcome back! Loading your asset dashboard...',
         });
+        setTimeout(() => navigate('/user'), 800);
       } else {
         // Mock error condition to show dynamic error feedback
         setStatus({
