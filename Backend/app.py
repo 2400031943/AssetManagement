@@ -8,12 +8,12 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Initialize extensions
+    
     CORS(app)
     db.init_app(app)
     jwt = JWTManager(app)
 
-    # Health check route
+    
     @app.route('/api/health', methods=['GET'])
     def health_check():
         return jsonify({"status": "healthy", "message": "Asset Management API is running"}), 200

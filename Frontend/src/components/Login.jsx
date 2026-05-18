@@ -46,7 +46,7 @@ export default function Login() {
       if (role === 'admin' && identifier.includes('admin')) {
         setStatus({
           type: 'success',
-          message: 'Admin Authentication successful! Accessing manager dashboard...',
+          message: 'Admin Authentication successful! Accessing Admin dashboard...',
         });
         setTimeout(() => navigate('/admin'), 800);
       } else if (role === 'user' && identifier.includes('@')) {
@@ -56,7 +56,7 @@ export default function Login() {
         });
         setTimeout(() => navigate('/user'), 800);
       } else {
-        // Mock error condition to show dynamic error feedback
+        // error condition to show wrong credentials message 
         setStatus({
           type: 'error',
           message: role === 'admin' 
@@ -84,8 +84,8 @@ export default function Login() {
           <div className="login-logo-wrapper">
             <Database size={32} />
           </div>
-          <h1 className="login-title">Asset manager</h1>
-          <p className="login-subtitle">Secure Premium Asset Management</p>
+          <h1 className="login-title">Asset Manager</h1>
+          <p className="login-subtitle">Find your Assets with ease</p>
         </div>
 
         {/* Dynamic Tab Switcher */}
@@ -117,7 +117,7 @@ export default function Login() {
                 id="identifier"
                 type="text"
                 className="login-input"
-                placeholder={role === 'admin' ? 'admin.super@company.com' : 'name@company.com'}
+                placeholder={role === 'admin' ? 'admin_name@nrsc.gov.in' : 'xxxx@nrsc.gov.in'}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required
@@ -139,7 +139,7 @@ export default function Login() {
                 id="password"
                 type="password"
                 className="login-input"
-                placeholder="••••••••••••"
+                placeholder="Enter your password here"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

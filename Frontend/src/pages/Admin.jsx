@@ -21,16 +21,16 @@ export default function Admin() {
       setLoading(true);
       setTimeout(() => {
         setUsers([
-          { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Standard User', assetCount: 3 },
-          { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Standard User', assetCount: 1 },
-          { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Manager', assetCount: 0 },
+          { id: 1, name: 'Manoj ', email: 'manaoj@nrsc.gov.in', role: 'Networking Engineer', assetCount: 3 },
+          { id: 2, name: 'Irfan sait', email: 'irfan@nrsc.gov.in', role: 'Networking Engineer', assetCount: 1 },
+          { id: 3, name: 'Raghavendra', email: 'raghavendra@nrsc.gov.in', role: 'Head of ITID ', assetCount: 25 },
         ]);
         
         setAllAssets([
-          { id: 1, name: 'Dell Monitor 24"', category: 'IT Systems', serialNumber: 'SN-12345', make: 'Dell', model: 'UltraSharp', assignedUserId: 1, assignedUserName: 'John Doe' },
-          { id: 2, name: 'Office Desk', category: 'Furniture', serialNumber: 'FR-9981', make: 'IKEA', model: 'Bekant', assignedUserId: 1, assignedUserName: 'John Doe' },
-          { id: 3, name: 'HP ProBook', category: 'IT Systems', serialNumber: 'HP-5544', make: 'HP', model: 'G8', assignedUserId: 1, assignedUserName: 'John Doe' },
-          { id: 4, name: 'MacBook Pro 16"', category: 'IT Systems', serialNumber: 'MAC-9876', make: 'Apple', model: 'M2 Pro', assignedUserId: 2, assignedUserName: 'Jane Smith' },
+          { id: 1, name: 'Dell Monitor 24"', category: 'IT Systems', serialNumber: 'SN-12345', make: 'Dell', model: 'UltraSharp', assignedUserId: 1, assignedUserName: 'Manoj ' },
+          { id: 2, name: 'Office Desk', category: 'Furniture', serialNumber: 'FR-9981', make: 'IKEA', model: 'Bekant', assignedUserId: 1, assignedUserName: 'Manoj ' },
+          { id: 3, name: 'HP ProBook', category: 'IT Systems', serialNumber: 'HP-5544', make: 'HP', model: 'G8', assignedUserId: 1, assignedUserName: 'Manoj ' },
+          { id: 4, name: 'MacBook Pro 16"', category: 'IT Systems', serialNumber: 'MAC-9876', make: 'Apple', model: 'M2 Pro', assignedUserId: 2, assignedUserName: 'Irfan sait' },
           { id: 5, name: 'Server Rack 42U', category: 'IT Systems', serialNumber: 'SRV-001', make: 'APC', model: 'NetShelter', assignedUserId: null, assignedUserName: null },
           { id: 6, name: 'Conference Table', category: 'Furniture', serialNumber: 'FR-1002', make: 'Steelcase', model: 'Ology', assignedUserId: null, assignedUserName: null },
         ]);
@@ -103,7 +103,7 @@ export default function Admin() {
           <div className="user-profile-card">
             <div className="user-profile-icon">A</div>
             <div className="user-profile-info">
-              <span className="user-profile-name">Admin User</span>
+              <span className="user-profile-name">Raghavendra K</span>
               <span className="user-profile-role">Administrator</span>
             </div>
           </div>

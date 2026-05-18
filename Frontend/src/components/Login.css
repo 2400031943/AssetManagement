@@ -7,7 +7,6 @@
   background-color: var(--bg-base);
 }
 
-/* Hide background glowing blobs to remove AI aesthetic */
 .login-blob-1,
 .login-blob-2 {
   display: none;
