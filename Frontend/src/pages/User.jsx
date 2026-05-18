@@ -69,7 +69,13 @@ export default function User() {
         </nav>
 
         <div className="sidebar-footer">
-          <button onClick={handleLogout} className="logout-btn full-width">
+          <div className="user-profile-card">
+            <div className="user-profile-icon">J</div>
+            <div className="user-profile-info">
+              <span className="user-profile-name">John Doe</span>
+            </div>
+          </div>
+          <button onClick={handleLogout} className="logout-btn full-width" style={{ marginTop: '0.5rem' }}>
             <LogOut size={18} /> Logout
           </button>
         </div>
