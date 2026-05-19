@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Monitor, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Filter, Monitor, FileText, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import '../pages/Dashboard.css';
 
 export default function MyAssets({ assets, loading }) {
@@ -9,9 +10,29 @@ export default function MyAssets({ assets, loading }) {
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter ? asset.category === categoryFilter : true;
+    const matchesCategory = categoryFilter ? asset.CATEGORY === categoryFilter : true;
     return matchesSearch && matchesCategory;
   });
+
+  const exportToExcel = () => {
+    const exportData = filteredAssets.map(asset => ({
+      'Asset Name':        asset.name,
+      'Category':         asset.CATEGORY || '',
+      'Serial Number':    asset.serialNumber,
+      'Make':             asset.make,
+      'Model':            asset.model,
+      'IP Address':       asset.ipAddress || '',
+      'Network Domain':   asset.networkDomain || '',
+      'ACMS/FMS':         asset.acmsFms || '',
+      'FMS Expiry Date':  asset.fmsExpiryDate || '',
+      'Location':         asset.LOCATION || '',
+      'Area':             asset.AREA || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'My Assets');
+    XLSX.writeFile(wb, 'my_assets.xlsx');
+  };
 
   return (
     <div className="my-assets-container animate-fade-in">
@@ -38,13 +59,29 @@ export default function MyAssets({ assets, loading }) {
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
               <option value="">All Categories</option>
-              <option value="IT Systems">IT Systems</option>
-              <option value="Furniture">Furniture</option>
-              <option value="Electrical">Electrical</option>
-              <option value="UPS">UPS</option>
+              <option value="SERVER TYPE 1">SERVER TYPE 1</option>
+              <option value="SERVER TYPE 2">SERVER TYPE 2</option>
+              <option value="PC TYPE 1">PC TYPE 1</option>
+              <option value="PC TYPE 2">PC TYPE 2</option>
+              <option value="PC TYPE 3">PC TYPE 3</option>
+              <option value="PC TYPE 4">PC TYPE 4</option>
+              <option value="STORAGE TYPE 2">STORAGE TYPE 2</option>
+              <option value="PRINTER TYPE 1">PRINTER TYPE 1</option>
+              <option value="PRINTER TYPE 2">PRINTER TYPE 2</option>
+              <option value="SP TYPE 1">SP TYPE 1</option>
+              <option value="SP TYPE 2">SP TYPE 2</option>
               <option value="Others">Others</option>
             </select>
           </div>
+
+          <button
+            onClick={exportToExcel}
+            className="submit-btn"
+            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            title="Export to Excel"
+          >
+            <Download size={16} /> Export
+          </button>
         </div>
       </div>
 
@@ -57,9 +94,9 @@ export default function MyAssets({ assets, loading }) {
               <div key={asset.id} className="asset-card glass-panel">
                 <div className="asset-card-header">
                   <div className="asset-icon">
-                    {asset.category === 'IT Systems' ? <Monitor size={20} /> : <FileText size={20} />}
+                    {asset.CATEGORY?.includes('SERVER') ? <Monitor size={20} /> : <FileText size={20} />}
                   </div>
-                  <span className="asset-category-badge">{asset.category}</span>
+                  <span className="asset-category-badge">{asset.CATEGORY}</span>
                 </div>
                 <h3 className="asset-name">{asset.name}</h3>
                 <div className="asset-details">

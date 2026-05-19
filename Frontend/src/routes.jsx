@@ -2,6 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import Login from './components/Login';
 import User from './pages/User';
 import Admin from './pages/Admin';
+import AreaAdmin from './pages/AreaAdmin';
 
 const RouterContext = createContext(null);
 
@@ -45,6 +46,8 @@ export const AppRoutes = () => {
       return <User />;
     case '/admin':
       return <Admin />;
+    case '/area-admin':
+      return <AreaAdmin />;
     case '/':
     default:
       return <Login />;

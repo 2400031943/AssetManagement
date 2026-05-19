@@ -6,7 +6,7 @@ export default function AdminUsers({ users, loading, onSelectUser }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredUsers = users.filter((u) => 
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (u.username || u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -42,7 +42,7 @@ export default function AdminUsers({ users, loading, onSelectUser }) {
                     </div>
                     <span className="asset-category-badge">{user.role}</span>
                   </div>
-                  <h3 className="asset-name">{user.name}</h3>
+                  <h3 className="asset-name">{user.username || user.name}</h3>
                   <div className="asset-details">
                     <p><strong>Email:</strong> {user.email}</p>
                     <p><strong>Assigned Assets:</strong> {user.assetCount}</p>

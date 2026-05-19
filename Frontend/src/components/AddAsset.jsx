@@ -4,10 +4,7 @@ import '../pages/Dashboard.css';
 
 export default function AddAsset({ onAddAsset }) {
   const [formData, setFormData] = useState({
-    category: '',
-    categoryOther: '',
     name: '',
-    nameOther: '',
     serialNumber: '',
     make: '',
     makeOther: '',
@@ -18,6 +15,20 @@ export default function AddAsset({ onAddAsset }) {
     networkDomainOther: '',
     ipAddress: '',
     acmsFms: '',
+    fmsExpiryDate: '',
+    Monitor: '',
+    MonitorCustom: '',
+    AssetCustodianECNO: '',
+    UserDivision: '',
+    UserDivisionOther: '',
+    GROUP: '',
+    GROUPOther: '',
+    AREA: '',
+    AREAOther: '',
+    CATEGORY: '',
+    CATEGORYOther: '',
+    LOCATION: '',
+    LOCATIONOther: '',
   });
 
   const [status, setStatus] = useState({ type: null, message: '' });
@@ -34,23 +45,24 @@ export default function AddAsset({ onAddAsset }) {
     // Construct final data mapping "Other" fields
     const payload = {
       ...formData,
-      category: formData.category === 'Others' ? formData.categoryOther : formData.category,
-      name: formData.name === 'Others' ? formData.nameOther : formData.name,
       make: formData.make === 'Others' ? formData.makeOther : formData.make,
       model: formData.model === 'Others' ? formData.modelOther : formData.model,
       networkDomain: formData.networkDomain === 'Others' ? formData.networkDomainOther : formData.networkDomain,
+      Monitor: formData.Monitor === 'Custom' ? formData.MonitorCustom : formData.Monitor,
+      UserDivision: formData.UserDivision === 'Others' ? formData.UserDivisionOther : formData.UserDivision,
+      GROUP: formData.GROUP === 'Others' ? formData.GROUPOther : formData.GROUP,
+      AREA: formData.AREA === 'Others' ? formData.AREAOther : formData.AREA,
+      CATEGORY: formData.CATEGORY === 'Others' ? formData.CATEGORYOther : formData.CATEGORY,
+      LOCATION: formData.LOCATION === 'Others' ? formData.LOCATIONOther : formData.LOCATION,
       acmsFms: formData.acmsFms,
+      fmsExpiryDate: formData.acmsFms === 'FMS' ? formData.fmsExpiryDate : '',
     };
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Saving to MSSQL Backend:', payload);
-      onAddAsset(payload);
+    try {
+      await onAddAsset(payload);  // parent (User.jsx) calls createAsset via api.js
       setStatus({ type: 'success', message: 'Asset added successfully!' });
-      // Reset form
       setFormData({
-        category: '', categoryOther: '',
-        name: '', nameOther: '',
+        name: '',
         serialNumber: '',
         make: '', makeOther: '',
         model: '', modelOther: '',
@@ -58,9 +70,19 @@ export default function AddAsset({ onAddAsset }) {
         networkDomain: '', networkDomainOther: '',
         ipAddress: '',
         acmsFms: '',
+        fmsExpiryDate: '',
+        Monitor: '', MonitorCustom: '',
+        AssetCustodianECNO: '',
+        UserDivision: '', UserDivisionOther: '',
+        GROUP: '', GROUPOther: '',
+        AREA: '', AREAOther: '',
+        CATEGORY: '', CATEGORYOther: '',
+        LOCATION: '', LOCATIONOther: '',
       });
       setTimeout(() => setStatus({ type: null, message: '' }), 3000);
-    }, 1000);
+    } catch (err) {
+      setStatus({ type: 'error', message: err.message || 'Failed to save asset. Please try again.' });
+    }
   };
 
   return (
@@ -75,51 +97,37 @@ export default function AddAsset({ onAddAsset }) {
 
       <form className="asset-form glass-panel" onSubmit={handleSubmit}>
         <div className="form-grid">
-          {/* Asset Category */}
+          {/* CATEGORY */}
           <div className="form-group">
-            <label>Asset Category *</label>
-            <select name="category" value={formData.category} onChange={handleChange} required className="login-input">
-              <option value="">Select Category...</option>
-              <option value="IT Systems">IT Systems</option>
-              <option value="Furniture">Furniture</option>
-              <option value="Electrical">Electrical</option>
-              <option value="UPS">UPS</option>
+            <label>CATEGORY *</label>
+            <select name="CATEGORY" value={formData.CATEGORY} onChange={handleChange} required className="login-input">
+              <option value="">Select CATEGORY...</option>
+              <option value="SERVER TYPE 1">SERVER TYPE 1</option>
+              <option value="SERVER TYPE 2">SERVER TYPE 2</option>
+              <option value="PC TYPE 1">PC TYPE 1</option>
+              <option value="PC TYPE 2">PC TYPE 2</option>
+              <option value="PC TYPE 3">PC TYPE 3</option>
+              <option value="PC TYPE 4">PC TYPE 4</option>
+              <option value="STORAGE TYPE 2">STORAGE TYPE 2</option>
+              <option value="PRINTER TYPE 1">PRINTER TYPE 1</option>
+              <option value="PRINTER TYPE 2">PRINTER TYPE 2</option>
+              <option value="SP TYPE 1">SP TYPE 1</option>
+              <option value="SP TYPE 2">SP TYPE 2</option>
               <option value="Others">Others</option>
             </select>
           </div>
-          {formData.category === 'Others' && (
+          {formData.CATEGORY === 'Others' && (
             <div className="form-group">
-              <label>Specify Category *</label>
-              <input type="text" name="categoryOther" value={formData.categoryOther} onChange={handleChange} required className="login-input" />
+              <label>Specify CATEGORY *</label>
+              <input type="text" name="CATEGORYOther" value={formData.CATEGORYOther} onChange={handleChange} required className="login-input" />
             </div>
           )}
 
           {/* Asset Name */}
           <div className="form-group">
             <label>Asset Name *</label>
-            {formData.category === 'IT Systems' ? (
-              <select name="name" value={formData.name} onChange={handleChange} required className="login-input">
-                <option value="">Select Asset Name...</option>
-                <option value="Printer">Printer</option>
-                <option value="Monitor">Monitor</option>
-                <option value="Server">Server</option>
-                <option value="Network Switch">Network Switch</option>
-                <option value="IP Phones">IP Phones</option>
-                <option value="Firewall">Firewall</option>
-                <option value="Router">Router</option>
-                <option value="TV / Display Unit">TV / Display Unit</option>
-                <option value="Others">Others</option>
-              </select>
-            ) : (
-              <input type="text" name="name" value={formData.name} onChange={handleChange} required className="login-input" placeholder="Enter Asset Name" />
-            )}
+            <input type="text" name="name" value={formData.name} onChange={handleChange} required className="login-input" placeholder="Enter Asset Name" />
           </div>
-          {formData.category === 'IT Systems' && formData.name === 'Others' && (
-            <div className="form-group">
-              <label>Specify Asset Name *</label>
-              <input type="text" name="nameOther" value={formData.nameOther} onChange={handleChange} required className="login-input" />
-            </div>
-          )}
 
           {/* Asset Serial Number */}
           <div className="form-group">
@@ -294,31 +302,6 @@ export default function AddAsset({ onAddAsset }) {
 
 
 
-          {/* CATEGORY*/}
-          <div className="form-group">
-            <label>CATEGORY</label>
-            <select name="CATEGORY" value={formData.CATEGORY} onChange={handleChange} className="login-input">
-              <option value="">Select CATEGORY...</option>
-              <option value="SERVER TYPE 1">SERVER TYPE 1</option>
-              <option value="SERVER TYPE 2">SERVER TYPE 2</option>
-              <option value="PC TYPE 1">PC TYPE 1</option>
-              <option value="PC TYPE 2">PC TYPE 2</option>
-              <option value="PC TYPE 3">PC TYPE 3</option>
-              <option value="PC TYPE 4">PC TYPE 4</option>
-              <option value="STORAGE TYPE 2">STORAGE TYPE 2</option>
-              <option value="PRINTER TYPE 1">PRINTER TYPE 1</option>
-              <option value="PRINTER TYPE 2">PRINTER TYPE 2</option>
-              <option value="SP TYPE 1">SP TYPE 1</option>
-              <option value="SP TYPE 2">SP TYPE 2</option>
-              <option value="Others">Others</option>
-            </select>
-          </div>
-          {formData.CATEGORY === 'Others' && (
-            <div className="form-group">
-              <label>Specify CATEGORY</label>
-              <input type="text" name="CATEGORYOther" value={formData.CATEGORYOther} onChange={handleChange} className="login-input" />
-            </div>
-          )}
 
           
           {/* LOCATION */}
@@ -351,6 +334,19 @@ export default function AddAsset({ onAddAsset }) {
             
             </select>
           </div>
+          {formData.acmsFms === 'FMS' && (
+            <div className="form-group">
+              <label>Date of Expiry *</label>
+              <input
+                type="date"
+                name="fmsExpiryDate"
+                value={formData.fmsExpiryDate}
+                onChange={handleChange}
+                required
+                className="login-input"
+              />
+            </div>
+          )}
        
 
         </div>
