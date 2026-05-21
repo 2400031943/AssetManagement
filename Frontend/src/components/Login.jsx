@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Mail, Lock, User, Shield, ArrowRight, CheckCircle2, AlertCircle, Database, MapPin } from 'lucide-react';
+import { BadgeCheck, Lock, User, Shield, ArrowRight, CheckCircle2, AlertCircle, Database, MapPin } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { login as apiLogin, signup as apiSignup } from '../api';
 import './Login.css';
@@ -34,7 +34,7 @@ export default function Login() {
     setStatus({ type: null, message: '' });
 
     try {
-      const displayName = identifier.includes('@') ? identifier.split('@')[0] : identifier;
+      const displayName = identifier.trim().toUpperCase();
 
       if (action === 'signup') {
         const apiRole = role === 'admin' ? 'Admin' : role === 'area-admin' ? 'AreaAdmin' : 'User';
@@ -44,29 +44,21 @@ export default function Login() {
         return;
       }
 
-      // LOGIN — validate format first (mock-friendly check)
-      const validAdmin    = role === 'admin'      && identifier.includes('admin');
-      const validAreaAdmin = role === 'area-admin' && identifier.includes('@');
-      const validUser      = role === 'user'       && identifier.includes('@');
-
-      if (!validAdmin && !validAreaAdmin && !validUser) {
-        setStatus({
-          type: 'error',
-          message: role === 'admin'
-            ? 'Admin identifier must contain "admin".'
-            : 'Please enter a valid email address.',
-        });
+      // LOGIN — call API directly, role is determined by tab selection
+      if (!identifier.trim()) {
+        setStatus({ type: 'error', message: 'Please enter your Employee Code.' });
         setLoading(false);
         return;
       }
 
       // Call API (mock or real)
-      const { user, token } = await apiLogin(identifier, password);
+      const { user, token } = await apiLogin(identifier.trim().toUpperCase(), password);
 
       // Persist session
       localStorage.setItem('user', JSON.stringify({
         ...user,
         name: user.username || displayName,
+        emp_code: user.emp_code || displayName,
         token,
         area: role === 'area-admin' ? selectedArea : (user.area || null),
       }));
@@ -121,17 +113,17 @@ export default function Login() {
         <form className="login-form" onSubmit={(e) => e.preventDefault()}>
           <div className="input-group">
             <label className="input-label" htmlFor="identifier">
-              {role === 'admin' ? 'Administrator ID / Email' : 'Email Address'}
+              Employee Code
             </label>
             <div className="input-wrapper">
               <input
                 id="identifier" type="text" className="login-input"
-                placeholder={role === 'admin' ? 'admin_name@nrsc.gov.in' : 'xxxx@nrsc.gov.in'}
+                placeholder="e.g. NR1234"
                 value={identifier} onChange={(e) => setIdentifier(e.target.value)} required
               />
               {role === 'admin' ? <Shield className="input-icon" />
                 : role === 'area-admin' ? <MapPin className="input-icon" />
-                : <Mail className="input-icon" />}
+                : <BadgeCheck className="input-icon" />}
             </div>
           </div>
 

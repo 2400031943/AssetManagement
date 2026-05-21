@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Database, Users, Server, Activity, LayoutDashboard, Monitor } from 'lucide-react';
+import { LogOut, Database, Users, Server, Activity, LayoutDashboard, Monitor, Laptop } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getAllUsers, getAllAssets } from '../api';
 import AdminUsers from '../components/AdminUsers';
 import AdminAssets from '../components/AdminAssets';
+import MyAssets from '../components/MyAssets';
 import './Dashboard.css';
 
 export default function Admin() {
@@ -48,6 +49,9 @@ export default function Admin() {
 
   const selectedUser = users.find(u => u.id === selectedUserId);
 
+  // Admin's own assets (assigned to this admin's id)
+  const myAssets = allAssets.filter(a => a.assigned_to === loggedInUser.id);
+
   return (
     <div className="dashboard-layout">
       <aside className="sidebar glass-panel">
@@ -67,6 +71,9 @@ export default function Admin() {
           </button>
           <button className={`nav-item ${activeTab === 'assets' && !selectedUserId ? 'active' : ''}`} onClick={() => handleTabChange('assets')}>
             <Monitor size={20} /><span>All Assets</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'my-assets' ? 'active' : ''}`} onClick={() => handleTabChange('my-assets')}>
+            <Laptop size={20} /><span>My Assets</span>
           </button>
         </nav>
 
@@ -116,6 +123,10 @@ export default function Admin() {
             selectedUser={selectedUser}
             onClearUserSelection={handleClearUserSelection}
           />
+        )}
+
+        {activeTab === 'my-assets' && (
+          <MyAssets assets={myAssets} loading={loading} />
         )}
       </main>
     </div>

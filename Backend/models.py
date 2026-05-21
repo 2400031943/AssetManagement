@@ -10,8 +10,8 @@ class User(db.Model):
 
     id            = db.Column(db.Integer, primary_key=True)
     username      = db.Column(db.String(80),  unique=True, nullable=False)
-    email         = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    emp_code      = db.Column(db.String(20),  unique=True, nullable=False)  # e.g. NR1234
+    password_hash = db.Column(db.String(256), nullable=True)
     role          = db.Column(db.String(20),  nullable=False, default='User')  # 'Admin' | 'User' | 'AreaAdmin'
     area          = db.Column(db.String(100), nullable=True)   # only for AreaAdmin
     division      = db.Column(db.String(100), nullable=True)
@@ -30,7 +30,7 @@ class User(db.Model):
         return {
             'id':         self.id,
             'username':   self.username,
-            'email':      self.email,
+            'emp_code':   self.emp_code,
             'role':       self.role,
             'area':       self.area,
             'division':   self.division,

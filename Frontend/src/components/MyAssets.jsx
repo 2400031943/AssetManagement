@@ -1,32 +1,77 @@
-import React, { useState } from 'react';
-import { Search, Filter, Monitor, FileText, Download } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, Filter, Download, ChevronDown, ChevronUp, Columns, Check } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import AssetDetailModal from './AssetDetailModal';
 import '../pages/Dashboard.css';
 
+const ALL_COLUMNS = [
+  { key: 'name',         label: 'Asset Name' },
+  { key: 'serialNumber', label: 'Serial Number' },
+  { key: 'make',         label: 'Make' },
+  { key: 'model',        label: 'Model' },
+  { key: 'ipAddress',    label: 'IP Address' },
+  { key: 'location',     label: 'Location' },
+  { key: 'acmsFms',      label: 'ACMS/FMS' },
+];
+
 export default function MyAssets({ assets, loading }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [searchTerm, setSearchTerm]           = useState('');
+  const [categoryFilter, setCategoryFilter]   = useState('');
+  const [selectedAsset, setSelectedAsset]     = useState(null);
+  const [collapsed, setCollapsed]             = useState({});
+  const [colPanelOpen, setColPanelOpen]       = useState(false);
+  const [visibleCols, setVisibleCols]         = useState(
+    Object.fromEntries(ALL_COLUMNS.map(c => [c.key, true]))
+  );
+  const colPanelRef = useRef(null);
+
+  // Close panel on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (colPanelRef.current && !colPanelRef.current.contains(e.target)) {
+        setColPanelOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleCol = (key) =>
+    setVisibleCols(prev => ({ ...prev, [key]: !prev[key] }));
 
   const filteredAssets = assets.filter((asset) => {
-    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter ? asset.CATEGORY === categoryFilter : true;
+    const matchesSearch =
+      (asset.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (asset.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter
+      ? (asset.CATEGORY || asset.category) === categoryFilter
+      : true;
     return matchesSearch && matchesCategory;
   });
 
+  const grouped = filteredAssets.reduce((acc, asset) => {
+    const cat = asset.CATEGORY || asset.category || 'Uncategorised';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(asset);
+    return acc;
+  }, {});
+
+  const toggleCollapse = (cat) =>
+    setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
+
   const exportToExcel = () => {
     const exportData = filteredAssets.map(asset => ({
-      'Asset Name':        asset.name,
-      'Category':         asset.CATEGORY || '',
-      'Serial Number':    asset.serialNumber,
-      'Make':             asset.make,
-      'Model':            asset.model,
-      'IP Address':       asset.ipAddress || '',
-      'Network Domain':   asset.networkDomain || '',
-      'ACMS/FMS':         asset.acmsFms || '',
-      'FMS Expiry Date':  asset.fmsExpiryDate || '',
-      'Location':         asset.LOCATION || '',
-      'Area':             asset.AREA || '',
+      'Category':        asset.CATEGORY || '',
+      'Asset Name':      asset.name,
+      'Serial Number':   asset.serialNumber,
+      'Make':            asset.make,
+      'Model':           asset.model,
+      'IP Address':      asset.ipAddress || '',
+      'Network Domain':  asset.networkDomain || '',
+      'ACMS/FMS':        asset.acmsFms || '',
+      'FMS Expiry Date': asset.fmsExpiryDate || '',
+      'Location':        asset.LOCATION || '',
+      'Area':            asset.AREA || '',
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -34,29 +79,34 @@ export default function MyAssets({ assets, loading }) {
     XLSX.writeFile(wb, 'my_assets.xlsx');
   };
 
+  const visibleCount = Object.values(visibleCols).filter(Boolean).length;
+
   return (
     <div className="my-assets-container animate-fade-in">
+      {/* ── Header ── */}
       <div className="section-header">
         <h2 className="section-title">My Assets</h2>
-        
+
         <div className="filters-container">
+          {/* Search */}
           <div className="search-wrapper">
             <Search className="search-icon" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search by name or serial..." 
+            <input
+              type="text"
+              placeholder="Search by name or serial..."
               className="search-input login-input"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
 
+          {/* Category filter */}
           <div className="filter-wrapper">
             <Filter className="filter-icon" size={18} />
-            <select 
+            <select
               className="filter-select login-input"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={e => setCategoryFilter(e.target.value)}
             >
               <option value="">All Categories</option>
               <option value="SERVER TYPE 1">SERVER TYPE 1</option>
@@ -74,6 +124,51 @@ export default function MyAssets({ assets, loading }) {
             </select>
           </div>
 
+          {/* ── Filter Fields dropdown ── */}
+          <div className="col-filter-wrapper" ref={colPanelRef}>
+            <button
+              className={`col-filter-btn ${colPanelOpen ? 'active' : ''}`}
+              onClick={() => setColPanelOpen(o => !o)}
+              title="Show / hide columns"
+            >
+              <Columns size={16} />
+              <span>Filter Fields</span>
+              {visibleCount < ALL_COLUMNS.length && (
+                <span className="col-filter-badge">{visibleCount}/{ALL_COLUMNS.length}</span>
+              )}
+              <ChevronDown size={14} className={`col-chevron ${colPanelOpen ? 'open' : ''}`} />
+            </button>
+
+            {colPanelOpen && (
+              <div className="col-filter-panel glass-panel animate-fade-in">
+                <p className="col-filter-title">Visible Columns</p>
+                {ALL_COLUMNS.map(col => (
+                  <label key={col.key} className="col-filter-item">
+                    <span className={`col-checkbox ${visibleCols[col.key] ? 'checked' : ''}`}>
+                      {visibleCols[col.key] && <Check size={11} strokeWidth={3} />}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={visibleCols[col.key]}
+                      onChange={() => toggleCol(col.key)}
+                      style={{ display: 'none' }}
+                    />
+                    {col.label}
+                  </label>
+                ))}
+                <div className="col-filter-actions">
+                  <button className="col-action-btn" onClick={() =>
+                    setVisibleCols(Object.fromEntries(ALL_COLUMNS.map(c => [c.key, true])))
+                  }>Show All</button>
+                  <button className="col-action-btn" onClick={() =>
+                    setVisibleCols(Object.fromEntries(ALL_COLUMNS.map(c => [c.key, false])))
+                  }>Hide All</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Export */}
           <button
             onClick={exportToExcel}
             className="submit-btn"
@@ -85,37 +180,72 @@ export default function MyAssets({ assets, loading }) {
         </div>
       </div>
 
+      {/* ── Body ── */}
       {loading ? (
-        <div className="loading-state">Loading your assets from MSSQL database...</div>
+        <div className="loading-state">Loading your assets...</div>
+      ) : filteredAssets.length === 0 ? (
+        <div className="empty-state"><p>No assets found matching your criteria.</p></div>
       ) : (
-        <div className="assets-grid">
-          {filteredAssets.length > 0 ? (
-            filteredAssets.map(asset => (
-              <div key={asset.id} className="asset-card glass-panel">
-                <div className="asset-card-header">
-                  <div className="asset-icon">
-                    {asset.CATEGORY?.includes('SERVER') ? <Monitor size={20} /> : <FileText size={20} />}
-                  </div>
-                  <span className="asset-category-badge">{asset.CATEGORY}</span>
+        <div className="category-table-wrapper">
+          {Object.entries(grouped).map(([category, rows]) => (
+            <div key={category} className="category-group glass-panel">
+              <button className="category-group-header" onClick={() => toggleCollapse(category)}>
+                <div className="category-group-title">
+                  <span className="category-badge-pill">{category}</span>
+                  <span className="category-count">{rows.length} asset{rows.length !== 1 ? 's' : ''}</span>
                 </div>
-                <h3 className="asset-name">{asset.name}</h3>
-                <div className="asset-details">
-                  <p><strong>S/N:</strong> {asset.serialNumber}</p>
-                  <p><strong>Make:</strong> {asset.make}</p>
-                  <p><strong>Model:</strong> {asset.model}</p>
-                  {asset.ipAddress && asset.ipAddress !== 'N/A' && (
-                    <p><strong>IP:</strong> {asset.ipAddress}</p>
-                  )}
+                {collapsed[category] ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+              </button>
+
+              {!collapsed[category] && (
+                <div className="category-table-scroll">
+                  <table className="asset-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        {visibleCols.name         && <th>Asset Name</th>}
+                        {visibleCols.serialNumber  && <th>Serial Number</th>}
+                        {visibleCols.make          && <th>Make</th>}
+                        {visibleCols.model         && <th>Model</th>}
+                        {visibleCols.ipAddress     && <th>IP Address</th>}
+                        {visibleCols.location      && <th>Location</th>}
+                        {visibleCols.acmsFms       && <th>ACMS/FMS</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((asset, idx) => (
+                        <tr
+                          key={asset.id}
+                          className="asset-table-row"
+                          onClick={() => setSelectedAsset(asset)}
+                          title="Click to view full details"
+                        >
+                          <td className="row-index">{idx + 1}</td>
+                          {visibleCols.name         && <td className="asset-name-cell">{asset.name}</td>}
+                          {visibleCols.serialNumber  && <td>{asset.serialNumber}</td>}
+                          {visibleCols.make          && <td>{asset.make}</td>}
+                          {visibleCols.model         && <td>{asset.model}</td>}
+                          {visibleCols.ipAddress     && <td>{asset.ipAddress || '—'}</td>}
+                          {visibleCols.location      && <td>{asset.LOCATION || asset.location || '—'}</td>}
+                          {visibleCols.acmsFms       && (
+                            <td>
+                              <span className={`acms-badge ${(asset.acmsFms || '').toLowerCase()}`}>
+                                {asset.acmsFms || '—'}
+                              </span>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="empty-state">
-              <p>No assets found matching your criteria.</p>
+              )}
             </div>
-          )}
+          ))}
         </div>
       )}
+
+      <AssetDetailModal asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
     </div>
   );
 }

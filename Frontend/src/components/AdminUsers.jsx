@@ -7,7 +7,7 @@ export default function AdminUsers({ users, loading, onSelectUser }) {
 
   const filteredUsers = users.filter((u) => 
     (u.username || u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (u.emp_code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -19,7 +19,7 @@ export default function AdminUsers({ users, loading, onSelectUser }) {
             <Search className="search-icon" size={18} />
             <input 
               type="text" 
-              placeholder="Search by name or email..." 
+              placeholder="Search by name or EC code..." 
               className="search-input login-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -44,7 +44,7 @@ export default function AdminUsers({ users, loading, onSelectUser }) {
                   </div>
                   <h3 className="asset-name">{user.username || user.name}</h3>
                   <div className="asset-details">
-                    <p><strong>Email:</strong> {user.email}</p>
+                    <p><strong>EC No:</strong> {user.emp_code}</p>
                     <p><strong>Assigned Assets:</strong> {user.assetCount}</p>
                   </div>
                 </div>
