@@ -34,8 +34,9 @@ cd Asset_Management
 
 3. Activate the virtual environment:
    - **Windows (PowerShell):** `.\venv\Scripts\Activate.ps1`
-   - **Windows (CMD):** `.\venv\Scripts\activate.bat`
+   - **Windows (CMD):** `.\.venv\Scripts\activate.bat`
    - **Mac/Linux:** `source venv/bin/activate`
+   - ## .\.venv\Scripts\activate.bat
 
 4. Install the required Python packages:
    ```bash
