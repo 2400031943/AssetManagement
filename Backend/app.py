@@ -8,6 +8,7 @@ from config import Config
 from models import db, User, Asset
 from datetime import date
 from sqlalchemy import text
+from auth import auth_bp
 
 
 # ---------------------------------------------------------------------------
@@ -22,6 +23,8 @@ def create_app(config_class=Config):
     db.init_app(app)
     JWTManager(app)
 
+    app.register_blueprint(auth_bp)
+
     # -----------------------------------------------------------------------
     # Health check
     # -----------------------------------------------------------------------
@@ -29,85 +32,6 @@ def create_app(config_class=Config):
     @app.route('/api/health', methods=['GET'])
     def health_check():
         return jsonify({"status": "healthy", "message": "Asset Management API is running"}), 200
-
-    # -----------------------------------------------------------------------
-    # AUTH endpoints
-    # -----------------------------------------------------------------------
-
-    @app.route('/api/auth/signup', methods=['POST'])
-    def signup():
-        """Create a new user account."""
-        data = request.get_json()
-        emp_code = data.get('emp_code', '').strip().upper()
-        username = data.get('username', emp_code)
-        password = data.get('password', '')
-        role     = data.get('role', 'User')       # 'User' | 'Admin' | 'AreaAdmin'
-        area     = data.get('area', None)         # required for AreaAdmin
-
-        if not emp_code or not password:
-            return jsonify({"error": "Employee Code and password are required"}), 400
-
-        if User.query.filter_by(emp_code=emp_code).first():
-            return jsonify({"error": "Employee Code already registered"}), 409
-
-        user = User(username=username, emp_code=emp_code, role=role, area=area)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-
-        return jsonify({"message": "Account created successfully", "user": user.to_dict()}), 201
-
-    @app.route('/api/auth/login', methods=['POST'])
-    def login():
-        """Authenticate a user via PIS Stored Procedure and return a JWT token."""
-        data     = request.get_json()
-        emp_code = data.get('emp_code', '').strip().upper()
-        password = data.get('password', '')
-
-        pis_verified = False
-
-        # 1. Try to verify via PIS Stored Procedure
-        try:
-            # The procedure takes both username and password
-            # EXEC SPES_SLOGINCHECK 'NR1234', 'secret'
-            engine = db.engines['remote_pis']
-            with engine.connect() as conn:
-                result = conn.execute(
-                    text("EXEC SPES_SLOGINCHECK :u, :p"), 
-                    {"u": emp_code, "p": password}
-                )
-                row = result.fetchone()
-            
-            # If the procedure returns a row, we assume the user is valid in PIS
-            if row:
-                pis_verified = True
-            else:
-                return jsonify({"error": "User not found in PIS system"}), 401
-
-        except Exception as e:
-            # Fallback if the Stored Procedure fails or doesn't exist yet
-            print(f"PIS Stored Procedure failed: {e}")
-            
-            # Fallback to local database password check
-            user = User.query.filter_by(emp_code=emp_code).first()
-            if not user or not user.check_password(password):
-                return jsonify({"error": "Invalid credentials (local fallback failed)"}), 401
-            pis_verified = True
-
-        # 2. If verified (via PIS or fallback), ensure user exists locally
-        if pis_verified:
-            user = User.query.filter_by(emp_code=emp_code).first()
-            if not user:
-                # Auto-create the user locally so we can assign assets to them
-                user = User(username=emp_code, emp_code=emp_code, role='User')
-                db.session.add(user)
-                db.session.commit()
-
-            token = create_access_token(identity=str(user.id))
-            return jsonify({
-                "token": token,
-                "user": user.to_dict()
-            }), 200
 
     # -----------------------------------------------------------------------
     # USER endpoints  (Admin only)
