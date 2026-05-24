@@ -70,11 +70,13 @@ def create_app(config_class=Config):
         try:
             # The procedure takes both username and password
             # EXEC SPES_SLOGINCHECK 'NR1234', 'secret'
-            result = db.session.execute(
-                text("EXEC SPES_SLOGINCHECK :u, :p"), 
-                {"u": emp_code, "p": password}
-            )
-            row = result.fetchone()
+            engine = db.engines['remote_pis']
+            with engine.connect() as conn:
+                result = conn.execute(
+                    text("EXEC SPES_SLOGINCHECK :u, :p"), 
+                    {"u": emp_code, "p": password}
+                )
+                row = result.fetchone()
             
             # If the procedure returns a row, we assume the user is valid in PIS
             if row:
