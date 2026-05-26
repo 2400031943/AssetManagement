@@ -11,7 +11,7 @@ class Config:
     
     # Local MSSQL Database Connection (for App Data)
     DB_SERVER = os.environ.get('DB_SERVER', 'localhost')
-    DB_NAME = os.environ.get('DB_NAME', 'AssetManagementDB')
+    DB_NAME = os.environ.get('DB_NAME', 'Asset_Manager')
     DB_USER = os.environ.get('DB_USER', 'sa')
     DB_PASSWORD = os.environ.get('DB_PASSWORD', 'sa')
     

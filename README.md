@@ -76,11 +76,11 @@ cd Asset_Management
 By default, the application is set to use **Mock Data** so you can develop the UI without needing a database. 
 
 If you want to connect to a real MS SQL Server on the new PC:
-1. Create a database in your SQL Server named `AssetManagementDB`.
+1. Create a database in your SQL Server named `Asset_Manager`.
 2. Open `Backend/.env` and update your SQL credentials:
    ```env
    DB_SERVER=localhost
-   DB_NAME=AssetManagementDB
+   DB_NAME=Asset_Manager
    DB_USER=sa
    DB_PASSWORD=YourStrong!Passw0rd
    ```

@@ -7,7 +7,7 @@
  *   3. Done — all calls will hit the real endpoints automatically.
  */
 
-const USE_MOCK = true;                        // ← flip to false for real backend
+const USE_MOCK = false;                        // ← flip to false for real backend
 const BASE_URL = 'http://localhost:5000/api'; // ← Flask backend URL
 
 // ---------------------------------------------------------------------------
