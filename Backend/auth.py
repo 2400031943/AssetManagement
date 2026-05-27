@@ -5,29 +5,6 @@ from models import db, User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
-@auth_bp.route('/signup', methods=['POST'])
-def signup():
-    """Create a new user account."""
-    data = request.get_json()
-    emp_code = data.get('emp_code', '').strip().upper()
-    username = data.get('username', emp_code)
-    password = data.get('password', '')
-    role     = data.get('role', 'User')       # 'User' | 'Admin' | 'AreaAdmin'
-    area     = data.get('area', None)         # required for AreaAdmin
-
-    if not emp_code or not password:
-        return jsonify({"error": "Employee Code and password are required"}), 400
-
-    if User.query.filter_by(emp_code=emp_code).first():
-        return jsonify({"error": "Employee Code already registered"}), 409
-
-    user = User(username=username, emp_code=emp_code, role=role, area=area)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-
-    return jsonify({"message": "Account created successfully", "user": user.to_dict()}), 201
-
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """Authenticate a user via PIS Stored Procedure and return a JWT token."""

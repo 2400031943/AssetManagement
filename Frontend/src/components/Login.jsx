@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { BadgeCheck, Lock, User, Shield, ArrowRight, CheckCircle2, AlertCircle, Database, MapPin } from 'lucide-react';
 import { useNavigate } from '../routes';
-import { login as apiLogin, signup as apiSignup } from '../api';
+import { login as apiLogin } from '../api';
 import './Login.css';
 
 export default function Login() {
@@ -20,8 +20,10 @@ export default function Login() {
     setSelectedArea('');
   };
 
-  const handleAction = async (action) => {
-    if (!identifier || !password) {
+  const handleLogin = async () => {
+    const employeeCode = identifier.trim().toUpperCase();
+
+    if (!employeeCode || !password) {
       setStatus({ type: 'error', message: 'Please fill in all required credentials.' });
       return;
     }
@@ -34,31 +36,13 @@ export default function Login() {
     setStatus({ type: null, message: '' });
 
     try {
-      const displayName = identifier.trim().toUpperCase();
-
-      if (action === 'signup') {
-        const apiRole = role === 'admin' ? 'Admin' : role === 'area-admin' ? 'AreaAdmin' : 'User';
-        await apiSignup(identifier, password, apiRole, selectedArea || null);
-        setStatus({ type: 'success', message: `Account created successfully for ${role.toUpperCase()}! Please log in.` });
-        setLoading(false);
-        return;
-      }
-
-      // LOGIN — call API directly, role is determined by tab selection
-      if (!identifier.trim()) {
-        setStatus({ type: 'error', message: 'Please enter your Employee Code.' });
-        setLoading(false);
-        return;
-      }
-
-      // Call API (mock or real)
-      const { user, token } = await apiLogin(identifier.trim().toUpperCase(), password);
+      const { user, token } = await apiLogin(employeeCode, password);
 
       // Persist session
       localStorage.setItem('user', JSON.stringify({
         ...user,
-        name: user.username || displayName,
-        emp_code: user.emp_code || displayName,
+        name: user.username || employeeCode,
+        emp_code: user.emp_code || employeeCode,
         token,
         area: role === 'area-admin' ? selectedArea : (user.area || null),
       }));
@@ -110,7 +94,10 @@ export default function Login() {
           </button>
         </div>
 
-        <form className="login-form" onSubmit={(e) => e.preventDefault()}>
+        <form className="login-form" onSubmit={(e) => {
+          e.preventDefault();
+          handleLogin();
+        }}>
           <div className="input-group">
             <label className="input-label" htmlFor="identifier">
               Employee Code
@@ -163,10 +150,7 @@ export default function Login() {
           )}
 
           <div className="btn-group">
-            <button type="button" className="signup-btn" disabled={loading} onClick={() => handleAction('signup')}>
-              {loading ? <div className="spinner"></div> : <span>Signup</span>}
-            </button>
-            <button type="button" className="login-btn" disabled={loading} onClick={() => handleAction('login')}>
+            <button type="submit" className="login-btn" disabled={loading}>
               {loading ? <div className="spinner"></div> : <><span>Login</span><ArrowRight size={18} /></>}
             </button>
           </div>

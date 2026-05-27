@@ -116,17 +116,6 @@ export async function login(emp_code, password) {
   });
 }
 
-export async function signup(emp_code, password, role, area) {
-  if (USE_MOCK) {
-    await delay();
-    return { message: `Account created successfully for ${role.toUpperCase()}! Please log in.` };
-  }
-  return apiFetch('/auth/signup', {
-    method: 'POST',
-    body: JSON.stringify({ emp_code, username: emp_code, password, role, area }),
-  });
-}
-
 // ---------------------------------------------------------------------------
 // USERS
 // ---------------------------------------------------------------------------
