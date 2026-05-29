@@ -37,11 +37,15 @@ export default function Login() {
 
     try {
       const { user, token } = await apiLogin(employeeCode, password);
+      const displayName = user.employeeName || user.employee_name || user.username || employeeCode;
+      const designation = user.designation || user.DESGFULLNAME || user.role || '';
 
       // Persist session
       localStorage.setItem('user', JSON.stringify({
         ...user,
-        name: user.username || employeeCode,
+        name: displayName,
+        employeeName: displayName,
+        designation,
         emp_code: user.emp_code || employeeCode,
         token,
         area: role === 'area-admin' ? selectedArea : (user.area || null),

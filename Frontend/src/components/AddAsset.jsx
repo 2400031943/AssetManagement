@@ -87,7 +87,7 @@ export default function AddAsset({ onAddAsset }) {
 
   return (
     <div className="add-asset-container animate-fade-in">
-      <h2 className="section-title">Add New Asset</h2>
+      <h2 className="section-title">Select your asset to add into ACMS List</h2>
       
       {status.message && (
         <div className={`status-banner ${status.type}`}>

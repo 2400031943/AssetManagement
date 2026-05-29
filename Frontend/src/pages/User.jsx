@@ -9,6 +9,8 @@ import './Dashboard.css';
 export default function User() {
   const navigate = useNavigate();
   const loggedInUser = JSON.parse(localStorage.getItem('user') || '{"name": "User"}');
+  const footerName = loggedInUser.employeeName || loggedInUser.name || loggedInUser.username || 'User';
+  const footerDesignation = loggedInUser.designation || loggedInUser.role || 'User';
   const [activeTab, setActiveTab] = useState('my-assets');
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,9 +57,10 @@ export default function User() {
 
         <div className="sidebar-footer">
           <div className="user-profile-card">
-            <div className="user-profile-icon">{loggedInUser.name?.charAt(0).toUpperCase() || 'U'}</div>
+            <div className="user-profile-icon">{footerName.charAt(0).toUpperCase()}</div>
             <div className="user-profile-info">
-              <span className="user-profile-name">{loggedInUser.name}</span>
+              <span className="user-profile-name">{footerName}</span>
+              <span className="user-profile-role">{footerDesignation}</span>
             </div>
           </div>
           <button onClick={handleLogout} className="logout-btn full-width" style={{ marginTop: '0.5rem' }}>

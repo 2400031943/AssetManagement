@@ -7,6 +7,8 @@ import './Dashboard.css';
 export default function AreaAdmin() {
   const navigate = useNavigate();
   const loggedInUser = JSON.parse(localStorage.getItem('user') || '{"name": "Area Admin", "area": ""}');
+  const footerName = loggedInUser.employeeName || loggedInUser.name || loggedInUser.username || 'Area Admin';
+  const footerDesignation = loggedInUser.designation || 'Area Admin';
   const assignedArea = loggedInUser.area || 'All Areas';
 
   const [activeTab, setActiveTab] = useState('users');
@@ -89,10 +91,10 @@ export default function AreaAdmin() {
 
         <div className="sidebar-footer">
           <div className="user-profile-card">
-            <div className="user-profile-icon">{loggedInUser.name?.charAt(0).toUpperCase() || 'A'}</div>
+            <div className="user-profile-icon">{footerName.charAt(0).toUpperCase()}</div>
             <div className="user-profile-info">
-              <span className="user-profile-name">{loggedInUser.name}</span>
-              <span className="user-profile-role">Area Admin</span>
+              <span className="user-profile-name">{footerName}</span>
+              <span className="user-profile-role">{footerDesignation}</span>
             </div>
           </div>
           <button onClick={handleLogout} className="logout-btn full-width" style={{ marginTop: '0.5rem' }}>

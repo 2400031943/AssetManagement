@@ -39,14 +39,14 @@ async function apiFetch(path, options = {}) {
 
 const MOCK_USERS = [
   // ── Users ────────────────────────────────────────────────────────────────
-  { id: 1, username: 'manoj',      emp_code: 'NR1001', role: 'User',      area: 'Balanagar', division: 'DPFD',  assetCount: 2 },
-  { id: 2, username: 'irfansait',  emp_code: 'NR1002', role: 'User',      area: 'Shadnagar', division: 'ASAG',  assetCount: 1 },
-  { id: 4, username: 'suresh',     emp_code: 'NR1004', role: 'User',      area: 'Shadnagar', division: 'RSAA',  assetCount: 1 },
+  { id: 1, username: 'manoj',      emp_code: 'NR1001', role: 'User',      area: 'Balanagar', division: 'DPFD',  assetCount: 2, employeeName: 'Manoj',      designation: 'Engineer' },
+  { id: 2, username: 'irfansait',  emp_code: 'NR1002', role: 'User',      area: 'Shadnagar', division: 'ASAG',  assetCount: 1, employeeName: 'Irfan Sait', designation: 'Senior Engineer' },
+  { id: 4, username: 'suresh',     emp_code: 'NR1004', role: 'User',      area: 'Shadnagar', division: 'RSAA',  assetCount: 1, employeeName: 'Suresh',     designation: 'Engineer' },
   // ── Admin ─────────────────────────────────────────────────────────────────
-  { id: 3, username: 'admin',      emp_code: 'NR0001', role: 'Admin',     area: null,        division: 'ASCID', assetCount: 0 },
+  { id: 3, username: 'admin',      emp_code: 'NR0001', role: 'Admin',     area: null,        division: 'ASCID', assetCount: 0, employeeName: 'Admin',      designation: 'Administrator' },
   // ── Area Admins ───────────────────────────────────────────────────────────
-  { id: 5, username: 'areaadmin1', emp_code: 'NR2001', role: 'AreaAdmin', area: 'Balanagar', division: 'DPFD',  assetCount: 0 },
-  { id: 6, username: 'areaadmin2', emp_code: 'NR2002', role: 'AreaAdmin', area: 'Shadnagar', division: 'RSAA',  assetCount: 0 },
+  { id: 5, username: 'areaadmin1', emp_code: 'NR2001', role: 'AreaAdmin', area: 'Balanagar', division: 'DPFD',  assetCount: 0, employeeName: 'Area Admin 1', designation: 'Area Administrator' },
+  { id: 6, username: 'areaadmin2', emp_code: 'NR2002', role: 'AreaAdmin', area: 'Shadnagar', division: 'RSAA',  assetCount: 0, employeeName: 'Area Admin 2', designation: 'Area Administrator' },
 ];
 
 const MOCK_ASSETS = [
