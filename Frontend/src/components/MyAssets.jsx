@@ -1,20 +1,76 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Filter, Download, ChevronDown, ChevronUp, Columns, Check } from 'lucide-react';
+import { Search, Filter, Download, ChevronDown, ChevronUp, Columns, Check, RefreshCw, AlertCircle, UserCheck } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AssetDetailModal from './AssetDetailModal';
 import '../pages/Dashboard.css';
 
 const ALL_COLUMNS = [
+  { key: 'sourceTable',  label: 'Source' },
+  { key: 'slNo',         label: 'SL No' },
+  { key: 'acmsCode',     label: 'ACMS Code' },
+  { key: 'assetNumber',  label: 'Asset Number_(Refer PIS Database)' },
+  { key: 'category',     label: 'Category' },
   { key: 'name',         label: 'Asset Name' },
-  { key: 'serialNumber', label: 'Serial Number' },
+  { key: 'serialNumber', label: 'System Serial Number' },
   { key: 'make',         label: 'Make' },
   { key: 'model',        label: 'Model' },
-  { key: 'ipAddress',    label: 'IP Address' },
+  { key: 'configuration', label: 'Brief Configuration' },
+  { key: 'networkDomain', label: 'Network Domain (Interent/Spacenet/NRSCVRF/DP etc)' },
+  { key: 'ipAddress',    label: 'IP' },
+  { key: 'monitor',      label: 'Monitor' },
+  { key: 'assetCustodianEcno', label: 'Asset Custodian ECNO_(Refer PIS Database)' },
+  { key: 'currentUserEcno', label: 'System-Current-User ECNO_(Refer Employee Directory)' },
+  { key: 'userDivision', label: 'User-Division _(Refer Employee Directory)' },
+  { key: 'group',        label: 'Group' },
+  { key: 'area',         label: 'Area' },
   { key: 'location',     label: 'Location' },
-  { key: 'acmsFms',      label: 'ACMS/FMS' },
+  { key: 'acmsFms',      label: 'ACMS, FMS, FMS + ACMS' },
+  { key: 'warrantyExpiryDate', label: 'Warranty  _Expiry Date' },
+  { key: 'remarks',      label: 'Remarks' },
+  { key: 'status',       label: 'Status' },
 ];
 
-export default function MyAssets({ assets, loading }) {
+function getAssetValue(asset, key) {
+  switch (key) {
+    case 'assetNumber':
+      return asset.assetNumber || asset.asset_number;
+    case 'category':
+      return asset.CATEGORY || asset.category;
+    case 'serialNumber':
+      return asset.serialNumber || asset.serial_number;
+    case 'networkDomain':
+      return asset.networkDomain || asset.network_domain;
+    case 'monitor':
+      return asset.Monitor || asset.monitor;
+    case 'assetCustodianEcno':
+      return asset.AssetCustodianECNO || asset.assetCustodianECNO || asset.asset_custodian_ecno;
+    case 'currentUserEcno':
+      return asset.SystemCurrentUserECNO || asset['System-Current-User ECNO_(Refer Employee Directory)'] || asset.current_user_ecno || asset.AssetCustodianECNO || asset.asset_custodian_ecno;
+    case 'userDivision':
+      return asset.UserDivision || asset.user_division;
+    case 'group':
+      return asset.GROUP || asset.group_name;
+    case 'area':
+      return asset.AREA || asset.area;
+    case 'location':
+      return asset.LOCATION || asset.location;
+    case 'acmsFms':
+      return asset.acmsFms || asset.acms_fms;
+    case 'fmsExpiryDate':
+      return asset.fmsExpiryDate || asset.fms_expiry_date;
+    case 'warrantyExpiryDate':
+      return asset.warrantyExpiryDate || asset.fmsExpiryDate || asset.fms_expiry_date;
+    default:
+      return asset[key];
+  }
+}
+
+function formatAssetValue(asset, key) {
+  const value = getAssetValue(asset, key);
+  return value || value === 0 ? value : '-';
+}
+
+export default function MyAssets({ assets, loading, error, employeeCode, onRefresh }) {
   const [searchTerm, setSearchTerm]           = useState('');
   const [categoryFilter, setCategoryFilter]   = useState('');
   const [selectedAsset, setSelectedAsset]     = useState(null);
@@ -42,7 +98,8 @@ export default function MyAssets({ assets, loading }) {
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
       (asset.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (asset.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (asset.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (getAssetValue(asset, 'currentUserEcno') || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter
       ? (asset.CATEGORY || asset.category) === categoryFilter
       : true;
@@ -60,19 +117,9 @@ export default function MyAssets({ assets, loading }) {
     setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
 
   const exportToExcel = () => {
-    const exportData = filteredAssets.map(asset => ({
-      'Category':        asset.CATEGORY || '',
-      'Asset Name':      asset.name,
-      'Serial Number':   asset.serialNumber,
-      'Make':            asset.make,
-      'Model':           asset.model,
-      'IP Address':      asset.ipAddress || '',
-      'Network Domain':  asset.networkDomain || '',
-      'ACMS/FMS':        asset.acmsFms || '',
-      'FMS Expiry Date': asset.fmsExpiryDate || '',
-      'Location':        asset.LOCATION || '',
-      'Area':            asset.AREA || '',
-    }));
+    const exportData = filteredAssets.map(asset =>
+      Object.fromEntries(ALL_COLUMNS.map(({ key, label }) => [label, formatAssetValue(asset, key)]))
+    );
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'My Assets');
@@ -85,7 +132,15 @@ export default function MyAssets({ assets, loading }) {
     <div className="my-assets-container animate-fade-in">
       {/* ── Header ── */}
       <div className="section-header">
-        <h2 className="section-title">My Assets</h2>
+        <div className="section-title-block">
+          <h2 className="section-title">My Assets</h2>
+          {employeeCode && (
+            <span className="section-ecno-tag">
+              <UserCheck size={14} />
+              Filtered by ECNO: <strong>{employeeCode.toUpperCase()}</strong>
+            </span>
+          )}
+        </div>
 
         <div className="filters-container">
           {/* Search */}
@@ -177,14 +232,42 @@ export default function MyAssets({ assets, loading }) {
           >
             <Download size={16} /> Export
           </button>
+
+          {/* Refresh */}
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              className="submit-btn"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.08)' }}
+              title="Refresh assets from database"
+              disabled={loading}
+            >
+              <RefreshCw size={16} className={loading ? 'spin-icon' : ''} /> Refresh
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Body ── */}
-      {loading ? (
-        <div className="loading-state">Loading your assets...</div>
+      {error ? (
+        <div className="error-state glass-panel">
+          <AlertCircle size={40} style={{ color: 'var(--accent-red, #f87171)', marginBottom: '0.75rem' }} />
+          <p style={{ marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>{error}</p>
+          {onRefresh && (
+            <button className="submit-btn" onClick={onRefresh} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <RefreshCw size={16} /> Try Again
+            </button>
+          )}
+        </div>
+      ) : loading ? (
+        <div className="loading-state">
+          <RefreshCw size={32} className="spin-icon" style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
+          <p>Loading assets for <strong>{employeeCode ? employeeCode.toUpperCase() : 'your account'}</strong>...</p>
+        </div>
       ) : filteredAssets.length === 0 ? (
-        <div className="empty-state"><p>No assets found matching your criteria.</p></div>
+        <div className="empty-state">
+          <p>No assets found{employeeCode ? ` for ECNO <strong>${employeeCode.toUpperCase()}</strong>` : ''} matching your criteria.</p>
+        </div>
       ) : (
         <div className="category-table-wrapper">
           {Object.entries(grouped).map(([category, rows]) => (
@@ -203,13 +286,9 @@ export default function MyAssets({ assets, loading }) {
                     <thead>
                       <tr>
                         <th>#</th>
-                        {visibleCols.name         && <th>Asset Name</th>}
-                        {visibleCols.serialNumber  && <th>Serial Number</th>}
-                        {visibleCols.make          && <th>Make</th>}
-                        {visibleCols.model         && <th>Model</th>}
-                        {visibleCols.ipAddress     && <th>IP Address</th>}
-                        {visibleCols.location      && <th>Location</th>}
-                        {visibleCols.acmsFms       && <th>ACMS/FMS</th>}
+                        {ALL_COLUMNS.map(col => (
+                          visibleCols[col.key] && <th key={col.key}>{col.label}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -221,19 +300,28 @@ export default function MyAssets({ assets, loading }) {
                           title="Click to view full details"
                         >
                           <td className="row-index">{idx + 1}</td>
-                          {visibleCols.name         && <td className="asset-name-cell">{asset.name}</td>}
-                          {visibleCols.serialNumber  && <td>{asset.serialNumber}</td>}
-                          {visibleCols.make          && <td>{asset.make}</td>}
-                          {visibleCols.model         && <td>{asset.model}</td>}
-                          {visibleCols.ipAddress     && <td>{asset.ipAddress || '—'}</td>}
-                          {visibleCols.location      && <td>{asset.LOCATION || asset.location || '—'}</td>}
-                          {visibleCols.acmsFms       && (
-                            <td>
-                              <span className={`acms-badge ${(asset.acmsFms || '').toLowerCase()}`}>
-                                {asset.acmsFms || '—'}
-                              </span>
-                            </td>
-                          )}
+                          {ALL_COLUMNS.map(col => {
+                            if (!visibleCols[col.key]) return null;
+                            const value = formatAssetValue(asset, col.key);
+                            if (col.key === 'acmsFms') {
+                              return (
+                                <td key={col.key}>
+                                  <span className={`acms-badge ${(getAssetValue(asset, col.key) || '').toLowerCase()}`}>
+                                    {value}
+                                  </span>
+                                </td>
+                              );
+                            }
+                            return (
+                              <td
+                                key={col.key}
+                                className={`${col.key === 'name' ? 'asset-name-cell' : ''} ${col.key === 'configuration' ? 'asset-config-cell' : ''}`}
+                                title={value}
+                              >
+                                {value}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>

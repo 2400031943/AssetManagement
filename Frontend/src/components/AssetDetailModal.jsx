@@ -32,6 +32,8 @@ export default function AssetDetailModal({ asset, onClose }) {
 
   const category = asset.CATEGORY || asset.category || '—';
   const isServer = category.toLowerCase().includes('server');
+  const assetCustodianEcno = asset.AssetCustodianECNO || asset.assetCustodianECNO || asset.asset_custodian_ecno;
+  const currentUserEcno = asset.SystemCurrentUserECNO || asset['System-Current-User ECNO_(Refer Employee Directory)'] || asset.current_user_ecno || assetCustodianEcno;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -62,17 +64,21 @@ export default function AssetDetailModal({ asset, onClose }) {
 
           {/* Identification */}
           <DetailSection icon={Tag} title="Identification">
+            <DetailRow label="Source"           value={asset.sourceTable} />
+            <DetailRow label="SL No"            value={asset.slNo} />
+            <DetailRow label="ACMS Code"        value={asset.acmsCode} />
+            <DetailRow label="Asset Number_(Refer PIS Database)" value={asset.assetNumber} />
             <DetailRow label="Asset Name"       value={asset.name} />
             <DetailRow label="Category"         value={category} />
-            <DetailRow label="Serial Number"    value={asset.serialNumber} />
+            <DetailRow label="System Serial Number" value={asset.serialNumber} />
             <DetailRow label="Make"             value={asset.make} />
             <DetailRow label="Model"            value={asset.model} />
           </DetailSection>
 
           {/* Network */}
           <DetailSection icon={Wifi} title="Network">
-            <DetailRow label="Network Domain"   value={asset.networkDomain} />
-            <DetailRow label="IP Address"       value={asset.ipAddress} />
+            <DetailRow label="Network Domain (Interent/Spacenet/NRSCVRF/DP etc)" value={asset.networkDomain} />
+            <DetailRow label="IP"               value={asset.ipAddress} />
           </DetailSection>
 
           {/* Configuration */}
@@ -89,8 +95,9 @@ export default function AssetDetailModal({ asset, onClose }) {
 
           {/* Organisation */}
           <DetailSection icon={Briefcase} title="Organisation">
-            <DetailRow label="Asset Custodian EC No"  value={asset.AssetCustodianECNO || asset.asset_custodian_ecno} />
-            <DetailRow label="User Division"           value={asset.UserDivision || asset.user_division} />
+            <DetailRow label="Asset Custodian ECNO_(Refer PIS Database)" value={assetCustodianEcno} />
+            <DetailRow label="System-Current-User ECNO_(Refer Employee Directory)" value={currentUserEcno} />
+            <DetailRow label="User-Division _(Refer Employee Directory)" value={asset.UserDivision || asset.user_division} />
             <DetailRow label="Group"                   value={asset.GROUP || asset.group_name} />
             <DetailRow label="Assigned To"             value={asset.assignedUserName} />
           </DetailSection>
@@ -103,8 +110,9 @@ export default function AssetDetailModal({ asset, onClose }) {
 
           {/* Compliance */}
           <DetailSection icon={Shield} title="Compliance">
-            <DetailRow label="ACMS / FMS"       value={asset.acmsFms || asset.acms_fms} />
-            <DetailRow label="FMS Expiry Date"  value={asset.fmsExpiryDate || asset.fms_expiry_date} />
+            <DetailRow label="ACMS, FMS, FMS + ACMS" value={asset.acmsFms || asset.acms_fms} />
+            <DetailRow label="Warranty  _Expiry Date" value={asset.warrantyExpiryDate || asset.fmsExpiryDate || asset.fms_expiry_date} />
+            <DetailRow label="Remarks"          value={asset.remarks} />
             <DetailRow label="Status"           value={asset.status} />
           </DetailSection>
 

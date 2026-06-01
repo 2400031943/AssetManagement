@@ -37,7 +37,7 @@ export default function Login() {
 
     try {
       const { user, token } = await apiLogin(employeeCode, password);
-      const displayName = user.employeeName || user.employee_name || user.username || employeeCode;
+      const displayName = user.employeeName || user.EMPLOYEENAME || user.employee_name || user.username || employeeCode;
       const designation = user.designation || user.DESGFULLNAME || user.role || '';
 
       // Persist session

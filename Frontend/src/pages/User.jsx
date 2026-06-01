@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { LogOut, Database, LayoutDashboard, PlusCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { LogOut, Database, LayoutDashboard, PlusCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getMyAssets, createAsset } from '../api';
 import MyAssets from '../components/MyAssets';
@@ -11,17 +11,36 @@ export default function User() {
   const loggedInUser = JSON.parse(localStorage.getItem('user') || '{"name": "User"}');
   const footerName = loggedInUser.employeeName || loggedInUser.name || loggedInUser.username || 'User';
   const footerDesignation = loggedInUser.designation || loggedInUser.role || 'User';
+  const employeeCode = loggedInUser.emp_code || loggedInUser.empCode || '';
   const [activeTab, setActiveTab] = useState('my-assets');
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchMyAssets = useCallback(() => {
     setLoading(true);
+    setError(null);
     getMyAssets()
-      .then(data => setAssets(data))
-      .catch(err => console.error('Failed to load assets:', err))
+      .then(data => {
+        setAssets(Array.isArray(data) ? data : []);
+      })
+      .catch(err => {
+        console.error('Failed to load assets:', err);
+        setError('Failed to load your assets. Please try again.');
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  // Fetch assets on mount and whenever the My Assets tab is activated
+  useEffect(() => {
+    if (activeTab === 'my-assets') {
+      fetchMyAssets();
+    }
+  }, [activeTab, fetchMyAssets]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -30,7 +49,14 @@ export default function User() {
 
   const handleAddAsset = async (newAsset) => {
     try {
-      const saved = await createAsset(newAsset);
+      // Inject the logged-in user's local DB id so the asset is linked correctly
+      const payload = {
+        ...newAsset,
+        assigned_to: loggedInUser.id || null,
+        // Ensure AssetCustodianECNO is set from logged-in user if not already provided
+        AssetCustodianECNO: newAsset.AssetCustodianECNO || employeeCode,
+      };
+      const saved = await createAsset(payload);
       setAssets(prev => [...prev, saved]);
       setActiveTab('my-assets');
     } catch (err) {
@@ -47,13 +73,27 @@ export default function User() {
         </div>
 
         <nav className="sidebar-nav">
-          <button className={`nav-item ${activeTab === 'my-assets' ? 'active' : ''}`} onClick={() => setActiveTab('my-assets')}>
+          <button
+            className={`nav-item ${activeTab === 'my-assets' ? 'active' : ''}`}
+            onClick={() => handleTabChange('my-assets')}
+          >
             <LayoutDashboard size={20} /><span>My Assets</span>
           </button>
-          <button className={`nav-item ${activeTab === 'add-asset' ? 'active' : ''}`} onClick={() => setActiveTab('add-asset')}>
+          <button
+            className={`nav-item ${activeTab === 'add-asset' ? 'active' : ''}`}
+            onClick={() => handleTabChange('add-asset')}
+          >
             <PlusCircle size={20} /><span>Add Asset</span>
           </button>
         </nav>
+
+        {/* Employee code badge */}
+        {employeeCode && (
+          <div className="sidebar-ecno-badge">
+            <span className="sidebar-ecno-label">Employee Code</span>
+            <span className="sidebar-ecno-value">{employeeCode.toUpperCase()}</span>
+          </div>
+        )}
 
         <div className="sidebar-footer">
           <div className="user-profile-card">
@@ -70,7 +110,15 @@ export default function User() {
       </aside>
 
       <main className="dashboard-main-content">
-        {activeTab === 'my-assets' && <MyAssets assets={assets} loading={loading} />}
+        {activeTab === 'my-assets' && (
+          <MyAssets
+            assets={assets}
+            loading={loading}
+            error={error}
+            employeeCode={employeeCode}
+            onRefresh={fetchMyAssets}
+          />
+        )}
         {activeTab === 'add-asset' && <AddAsset onAddAsset={handleAddAsset} />}
       </main>
     </div>

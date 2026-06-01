@@ -65,9 +65,13 @@ def _query_employee_profile(conn, emp_code, schema_name, emp_code_column, employ
     if not row:
         return {}
 
+    employee_name = row.get("employee_name")
+    designation = row.get("designation")
     return {
-        "employeeName": row.get("employee_name"),
-        "designation": row.get("designation"),
+        "employeeName": employee_name,
+        "designation": designation,
+        "EMPLOYEENAME": employee_name,
+        "DESGFULLNAME": designation,
     }
 
 
@@ -152,12 +156,12 @@ def login():
         # EXEC SPES_SLOGINCHECK 'NR1234', 'secret'
         engine = db.engines['remote_pis']
         with engine.connect() as conn:
+            remote_pis_available = True
             result = conn.execute(
                 text("EXEC SPES_SLOGINCHECK :u, :p"), 
                 {"u": emp_code, "p": password}
             )
             row = result.fetchone()
-            remote_pis_available = True
             
         # The procedure returns 1 for success, 0 for failure
         if row and str(row[0]) == '1':

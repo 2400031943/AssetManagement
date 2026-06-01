@@ -7,7 +7,8 @@
  *   3. Done — all calls will hit the real endpoints automatically.
  */
 
-const USE_MOCK = false;                        // ← flip to false for real backend
+
+const USE_MOCK = false;                      // ← flip to false for real backend
 const BASE_URL = 'http://localhost:5000/api'; // ← Flask backend URL
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,7 @@ const MOCK_USERS = [
   // ── Users ────────────────────────────────────────────────────────────────
   { id: 1, username: 'manoj',      emp_code: 'NR1001', role: 'User',      area: 'Balanagar', division: 'DPFD',  assetCount: 2, employeeName: 'Manoj',      designation: 'Engineer' },
   { id: 2, username: 'irfansait',  emp_code: 'NR1002', role: 'User',      area: 'Shadnagar', division: 'ASAG',  assetCount: 1, employeeName: 'Irfan Sait', designation: 'Senior Engineer' },
+  { id: 2, username: 'Rahim',  emp_code: 'NR01412', role: 'Technisian',      area: 'Shadnagar', division: 'ASAG',  assetCount: 1, employeeName: 'Rahim', designation: 'Technisian' },
   { id: 4, username: 'suresh',     emp_code: 'NR1004', role: 'User',      area: 'Shadnagar', division: 'RSAA',  assetCount: 1, employeeName: 'Suresh',     designation: 'Engineer' },
   // ── Admin ─────────────────────────────────────────────────────────────────
   { id: 3, username: 'admin',      emp_code: 'NR0001', role: 'Admin',     area: null,        division: 'ASCID', assetCount: 0, employeeName: 'Admin',      designation: 'Administrator' },
@@ -144,10 +146,34 @@ export async function getMyAssets() {
   if (USE_MOCK) {
     await delay();
     const me = JSON.parse(localStorage.getItem('user') || '{}');
-    // Match by username stored in localStorage
-    return MOCK_ASSETS.filter(a => a.assignedUserName === me.name);
+    const employeeCode = (me.emp_code || '').trim().toUpperCase();
+    // My Assets — returns from local Asset_Manager DB (mocked as MOCK_ASSETS)
+    return MOCK_ASSETS.filter(a => (
+      a.AssetCustodianECNO || ''
+    ).trim().toUpperCase() === employeeCode);
   }
   return apiFetch('/assets/mine');
+}
+
+/**
+ * Fetch asset recommendations from the remote cowmis database (ACMS$ / FMS$ tables).
+ * These are shown on the Add Asset page so the user can quickly pre-fill the form.
+ */
+export async function getAssetRecommendations() {
+  if (USE_MOCK) {
+    await delay();
+    const me = JSON.parse(localStorage.getItem('user') || '{}');
+    const employeeCode = (me.emp_code || '').trim().toUpperCase();
+    // Simulate remote cowmis data — same mock pool but tagged as remote recommendations
+    return MOCK_ASSETS
+      .filter(a => (a.AssetCustodianECNO || '').trim().toUpperCase() === employeeCode)
+      .map((a, i) => ({
+        ...a,
+        id: `cowmis-${i + 1}`,
+        sourceTable: a.acmsFms || 'ACMS',
+      }));
+  }
+  return apiFetch('/assets/recommendations');
 }
 
 export async function getAllAssets() {

@@ -7,8 +7,114 @@ from flask_jwt_extended import (
 from config import Config
 from models import db, User, Asset
 from datetime import date
-from sqlalchemy import text
+from sqlalchemy import func, text
 from auth import auth_bp
+
+
+SYSTEM_CURRENT_USER_ECNO_COLUMN = 'System-Current-User ECNO_(Refer Employee Directory)'
+IMPORTED_ASSET_TABLES = (
+    {
+        'source': 'ACMS',
+        'table': 'ACMS$',
+        'acms_code_expr': "NULLIF(LTRIM(RTRIM(CAST([ACMS Code] AS NVARCHAR(255)))), '')",
+        'remarks_expr': "NULLIF(LTRIM(RTRIM(CAST([Remarks] AS NVARCHAR(255)))), '')",
+    },
+    {
+        'source': 'FMS',
+        'table': 'FMS$',
+        'acms_code_expr': "CAST(NULL AS NVARCHAR(255))",
+        'remarks_expr': "CAST(NULL AS NVARCHAR(255))",
+    },
+)
+
+
+def _clean_value(value):
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def _imported_asset_to_dict(row, source, index):
+    sl_no = _clean_value(row.get('sl_no'))
+    acms_code = _clean_value(row.get('acms_code'))
+    asset_number = _clean_value(row.get('asset_number'))
+    serial_number = _clean_value(row.get('serial_number'))
+    current_user_ecno = _clean_value(row.get('current_user_ecno'))
+    asset_custodian_ecno = _clean_value(row.get('asset_custodian_ecno'))
+    category = _clean_value(row.get('category'))
+    warranty_expiry_date = _clean_value(row.get('warranty_expiry_date'))
+
+    return {
+        'id': f"{source}-{index}",
+        'sourceTable': source,
+        'slNo': sl_no,
+        'acmsCode': acms_code,
+        'assetNumber': asset_number,
+        'name': asset_number or serial_number or category or f"{source} Asset {index}",
+        'serialNumber': serial_number,
+        'CATEGORY': category,
+        'make': _clean_value(row.get('make')),
+        'model': _clean_value(row.get('model')),
+        'configuration': _clean_value(row.get('configuration')),
+        'networkDomain': _clean_value(row.get('network_domain')),
+        'ipAddress': _clean_value(row.get('ip_address')),
+        'Monitor': _clean_value(row.get('monitor')),
+        'AssetCustodianECNO': asset_custodian_ecno,
+        'SystemCurrentUserECNO': current_user_ecno,
+        SYSTEM_CURRENT_USER_ECNO_COLUMN: current_user_ecno,
+        'UserDivision': _clean_value(row.get('user_division')),
+        'GROUP': _clean_value(row.get('group_name')),
+        'AREA': _clean_value(row.get('area')),
+        'LOCATION': _clean_value(row.get('location')),
+        'acmsFms': _clean_value(row.get('acms_fms')) or source,
+        'warrantyExpiryDate': warranty_expiry_date,
+        'fmsExpiryDate': warranty_expiry_date,
+        'remarks': _clean_value(row.get('remarks')),
+        'assigned_to': None,
+        'assignedUserName': current_user_ecno,
+        'status': 'Assigned',
+    }
+
+
+def _fetch_imported_assets_for_employee(employee_code):
+    assets = []
+
+    for imported_table in IMPORTED_ASSET_TABLES:
+        query = text(f"""
+            SELECT
+                NULLIF(LTRIM(RTRIM(CAST([SL No] AS NVARCHAR(255)))), '') AS sl_no,
+                {imported_table['acms_code_expr']} AS acms_code,
+                NULLIF(LTRIM(RTRIM(CAST([Asset Number_(Refer PIS Database)] AS NVARCHAR(255)))), '') AS asset_number,
+                NULLIF(LTRIM(RTRIM(CAST([System Serial Number] AS NVARCHAR(255)))), '') AS serial_number,
+                NULLIF(LTRIM(RTRIM(CAST([Make] AS NVARCHAR(255)))), '') AS make,
+                NULLIF(LTRIM(RTRIM(CAST([Model] AS NVARCHAR(255)))), '') AS model,
+                NULLIF(LTRIM(RTRIM(CAST([Brief Configuration] AS NVARCHAR(MAX)))), '') AS configuration,
+                NULLIF(LTRIM(RTRIM(CAST([Network Domain (Interent/Spacenet/NRSCVRF/DP etc)] AS NVARCHAR(255)))), '') AS network_domain,
+                NULLIF(LTRIM(RTRIM(CAST([IP] AS NVARCHAR(255)))), '') AS ip_address,
+                NULLIF(LTRIM(RTRIM(CAST([Monitor] AS NVARCHAR(255)))), '') AS monitor,
+                NULLIF(LTRIM(RTRIM(CAST([Asset Custodian ECNO_(Refer PIS Database)] AS NVARCHAR(255)))), '') AS asset_custodian_ecno,
+                NULLIF(LTRIM(RTRIM(CAST([{SYSTEM_CURRENT_USER_ECNO_COLUMN}] AS NVARCHAR(255)))), '') AS current_user_ecno,
+                NULLIF(LTRIM(RTRIM(CAST([User-Division _(Refer Employee Directory)] AS NVARCHAR(255)))), '') AS user_division,
+                NULLIF(LTRIM(RTRIM(CAST([Group] AS NVARCHAR(255)))), '') AS group_name,
+                NULLIF(LTRIM(RTRIM(CAST([Area] AS NVARCHAR(255)))), '') AS area,
+                NULLIF(LTRIM(RTRIM(CAST([Category] AS NVARCHAR(255)))), '') AS category,
+                NULLIF(LTRIM(RTRIM(CAST([Location] AS NVARCHAR(255)))), '') AS location,
+                NULLIF(LTRIM(RTRIM(CAST([ACMS, FMS, FMS + ACMS] AS NVARCHAR(255)))), '') AS acms_fms,
+                NULLIF(LTRIM(RTRIM(CAST([Warranty  _Expiry Date] AS NVARCHAR(255)))), '') AS warranty_expiry_date,
+                {imported_table['remarks_expr']} AS remarks
+            FROM [dbo].[{imported_table['table']}]
+            WHERE UPPER(LTRIM(RTRIM(CAST([{SYSTEM_CURRENT_USER_ECNO_COLUMN}] AS NVARCHAR(50))))) = :employee_code
+            ORDER BY [SL No]
+        """)
+        rows = db.session.execute(query, {'employee_code': employee_code}).mappings().all()
+        start_index = len(assets)
+        assets.extend([
+            _imported_asset_to_dict(row, imported_table['source'], start_index + index + 1)
+            for index, row in enumerate(rows)
+        ])
+
+    return assets
 
 
 # ---------------------------------------------------------------------------
@@ -85,10 +191,41 @@ def create_app(config_class=Config):
     @app.route('/api/assets/mine', methods=['GET'])
     @jwt_required()
     def get_my_assets():
-        """Return assets assigned to the currently logged-in user."""
+        """Return assets from the LOCAL Asset_Manager DB assigned to the logged-in user."""
         current_user_id = int(get_jwt_identity())
-        assets = Asset.query.filter_by(assigned_to=current_user_id).all()
-        return jsonify([a.to_dict() for a in assets]), 200
+        current_user = User.query.get_or_404(current_user_id)
+        employee_code = (current_user.emp_code or '').strip().upper()
+        if not employee_code:
+            return jsonify([]), 200
+
+        # Only return assets stored in the local Asset_Manager database
+        app_assets = Asset.query.filter(
+            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
+        ).all()
+
+        return jsonify([a.to_dict() for a in app_assets]), 200
+
+    @app.route('/api/assets/recommendations', methods=['GET'])
+    @jwt_required()
+    def get_asset_recommendations():
+        """
+        Return asset recommendations from the REMOTE cowmis database (ACMS$ / FMS$ tables)
+        for the logged-in employee. These are used to pre-fill the Add Asset form so the
+        user can register remote assets into the local Asset_Manager DB.
+        """
+        current_user_id = int(get_jwt_identity())
+        current_user = User.query.get_or_404(current_user_id)
+        employee_code = (current_user.emp_code or '').strip().upper()
+        if not employee_code:
+            return jsonify([]), 200
+
+        try:
+            remote_assets = _fetch_imported_assets_for_employee(employee_code)
+        except Exception as e:
+            print(f"Failed to fetch recommendations from remote cowmis DB: {e}")
+            return jsonify([]), 200  # Graceful degradation — do not break the UI
+
+        return jsonify(remote_assets), 200
 
     @app.route('/api/assets', methods=['POST'])
     @jwt_required()
