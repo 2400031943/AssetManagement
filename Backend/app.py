@@ -206,30 +206,23 @@ def create_app(config_class=Config):
     @app.route('/api/assets/mine', methods=['GET'])
     @jwt_required()
     def get_my_assets():
-        """Return assets from the LOCAL Asset_Manager DB assigned to the logged-in user."""
+        """
+        Return assets from the LOCAL Asset_Manager DB (dbo.assets) where
+        asset_custodian_ecno matches the logged-in employee's ECNO.
+        """
         current_user_id = int(get_jwt_identity())
         current_user = User.query.get_or_404(current_user_id)
         employee_code = (current_user.emp_code or '').strip().upper()
 
-        # Match by ECNO (populated from form field) OR by assigned_to user id
-        # Using OR so assets saved either way are always visible to the user
-        from sqlalchemy import or_
-        app_assets = Asset.query.filter(
-            or_(
-                func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code,
-                Asset.assigned_to == current_user_id,
-            )
+        if not employee_code:
+            return jsonify([]), 200
+
+        # Fetch all rows from dbo.assets where asset_custodian_ecno = emp_code
+        assets = Asset.query.filter(
+            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
         ).all()
 
-        # De-duplicate in case both conditions match the same asset
-        seen = set()
-        unique_assets = []
-        for a in app_assets:
-            if a.id not in seen:
-                seen.add(a.id)
-                unique_assets.append(a)
-
-        return jsonify([a.to_dict() for a in unique_assets]), 200
+        return jsonify([a.to_dict() for a in assets]), 200
 
     @app.route('/api/assets/recommendations', methods=['GET'])
     @jwt_required()
