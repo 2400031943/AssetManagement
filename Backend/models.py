@@ -44,7 +44,7 @@ class Asset(db.Model):
     id                   = db.Column(db.Integer, primary_key=True)
 
     # Core identification
-    name                 = db.Column(db.String(100), nullable=False)
+    name                 = db.Column(db.String(100), nullable=True)   # NULL allowed for legacy rows
     serial_number        = db.Column(db.String(100), nullable=True)
 
     # Classification
@@ -73,7 +73,7 @@ class Asset(db.Model):
 
     # Assignment
     assigned_to          = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    status               = db.Column(db.String(50), nullable=False, default='Available')
+    status               = db.Column(db.String(50), nullable=True,  default='Available')
 
     created_at           = db.Column(db.DateTime, default=datetime.utcnow)
 

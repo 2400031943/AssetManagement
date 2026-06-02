@@ -36,13 +36,13 @@ def _clean_value(value):
 
 
 def _imported_asset_to_dict(row, source, index):
-    sl_no = _clean_value(row.get('sl_no'))
-    acms_code = _clean_value(row.get('acms_code'))
-    asset_number = _clean_value(row.get('asset_number'))
-    serial_number = _clean_value(row.get('serial_number'))
-    current_user_ecno = _clean_value(row.get('current_user_ecno'))
+    sl_no                = _clean_value(row.get('sl_no'))
+    acms_code            = _clean_value(row.get('acms_code'))
+    asset_number         = _clean_value(row.get('asset_number'))
+    serial_number        = _clean_value(row.get('serial_number'))
+    current_user_ecno    = _clean_value(row.get('current_user_ecno'))
     asset_custodian_ecno = _clean_value(row.get('asset_custodian_ecno'))
-    category = _clean_value(row.get('category'))
+    category             = _clean_value(row.get('category'))
     warranty_expiry_date = _clean_value(row.get('warranty_expiry_date'))
 
     return {
@@ -84,7 +84,6 @@ def _fetch_imported_assets_for_employee(employee_code):
     """
     assets = []
 
-    # Use the remote cowmis engine explicitly (same engine used in auth.py)
     remote_engine = db.engines.get('remote_pis')
     if not remote_engine:
         print("ERROR: remote_pis engine not configured — cannot fetch cowmis assets")
@@ -155,20 +154,20 @@ def create_app(config_class=Config):
         return jsonify({"status": "healthy", "message": "Asset Management API is running"}), 200
 
     # -----------------------------------------------------------------------
-    # USER endpoints  (Admin only)
+    # USER endpoints
     # -----------------------------------------------------------------------
 
     @app.route('/api/users', methods=['GET'])
     @jwt_required()
     def get_all_users():
-        """Return all users. Admin only."""
+        """Return all users."""
         users = User.query.all()
         return jsonify([u.to_dict() for u in users]), 200
 
     @app.route('/api/users/area/<string:area>', methods=['GET'])
     @jwt_required()
     def get_users_by_area(area):
-        """Return users whose area matches. AreaAdmin only."""
+        """Return users whose area matches."""
         users = User.query.filter_by(area=area).all()
         return jsonify([u.to_dict() for u in users]), 200
 
@@ -209,15 +208,17 @@ def create_app(config_class=Config):
         """
         Return assets from the LOCAL Asset_Manager DB (dbo.assets) where
         asset_custodian_ecno matches the logged-in employee's ECNO.
+        Works for any alphanumeric employee code format.
         """
         current_user_id = int(get_jwt_identity())
-        current_user = User.query.get_or_404(current_user_id)
-        employee_code = (current_user.emp_code or '').strip().upper()
+        current_user    = User.query.get_or_404(current_user_id)
+        employee_code   = (current_user.emp_code or '').strip().upper()
 
         if not employee_code:
             return jsonify([]), 200
 
-        # Fetch all rows from dbo.assets where asset_custodian_ecno = emp_code
+        # SELECT * FROM dbo.assets
+        # WHERE UPPER(LTRIM(RTRIM(asset_custodian_ecno))) = '<emp_code>'
         assets = Asset.query.filter(
             func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
         ).all()
@@ -228,13 +229,14 @@ def create_app(config_class=Config):
     @jwt_required()
     def get_asset_recommendations():
         """
-        Return asset recommendations from the REMOTE cowmis database (ACMS$ / FMS$ tables)
-        for the logged-in employee. These are used to pre-fill the Add Asset form so the
-        user can register remote assets into the local Asset_Manager DB.
+        Return asset recommendations from the REMOTE cowmis DB (ACMS$ / FMS$ tables)
+        for the logged-in employee. Used to pre-fill the Add Asset form.
+        Fails gracefully if cowmis is unreachable.
         """
         current_user_id = int(get_jwt_identity())
-        current_user = User.query.get_or_404(current_user_id)
-        employee_code = (current_user.emp_code or '').strip().upper()
+        current_user    = User.query.get_or_404(current_user_id)
+        employee_code   = (current_user.emp_code or '').strip().upper()
+
         if not employee_code:
             return jsonify([]), 200
 
@@ -242,14 +244,14 @@ def create_app(config_class=Config):
             remote_assets = _fetch_imported_assets_for_employee(employee_code)
         except Exception as e:
             print(f"Failed to fetch recommendations from remote cowmis DB: {e}")
-            return jsonify([]), 200  # Graceful degradation — do not break the UI
+            return jsonify([]), 200
 
         return jsonify(remote_assets), 200
 
     @app.route('/api/assets', methods=['POST'])
     @jwt_required()
     def create_asset():
-        """Create a new asset."""
+        """Create a new asset in the local Asset_Manager DB."""
         data = request.get_json()
 
         # Parse optional FMS expiry date
@@ -260,25 +262,26 @@ def create_app(config_class=Config):
             except ValueError:
                 pass
 
+        # Use `or None` so empty strings are stored as NULL (consistent with existing DB rows)
         asset = Asset(
-            name                 = data.get('name', ''),
-            serial_number        = data.get('serialNumber', ''),
-            category             = data.get('CATEGORY', ''),
-            make                 = data.get('make', ''),
-            model                = data.get('model', ''),
-            configuration        = data.get('configuration', ''),
-            network_domain       = data.get('networkDomain', ''),
-            ip_address           = data.get('ipAddress', ''),
-            monitor              = data.get('Monitor', ''),
-            asset_custodian_ecno = data.get('AssetCustodianECNO', ''),
-            user_division        = data.get('UserDivision', ''),
-            group_name           = data.get('GROUP', ''),
-            area                 = data.get('AREA', ''),
-            location             = data.get('LOCATION', ''),
-            acms_fms             = data.get('acmsFms', ''),
+            name                 = data.get('name') or None,
+            serial_number        = data.get('serialNumber') or None,
+            category             = data.get('CATEGORY') or None,
+            make                 = data.get('make') or None,
+            model                = data.get('model') or None,
+            configuration        = data.get('configuration') or None,
+            network_domain       = data.get('networkDomain') or None,
+            ip_address           = data.get('ipAddress') or None,
+            monitor              = data.get('Monitor') or None,
+            asset_custodian_ecno = data.get('AssetCustodianECNO') or None,
+            user_division        = data.get('UserDivision') or None,
+            group_name           = data.get('GROUP') or None,
+            area                 = data.get('AREA') or None,
+            location             = data.get('LOCATION') or None,
+            acms_fms             = data.get('acmsFms') or None,
             fms_expiry_date      = fms_expiry,
-            assigned_to          = data.get('assigned_to', None),
-            status               = data.get('status', 'Available'),
+            assigned_to          = data.get('assigned_to') or None,
+            status               = data.get('status') or 'Available',
         )
 
         db.session.add(asset)
@@ -318,7 +321,7 @@ def create_app(config_class=Config):
             'status':             'status',
         }.items():
             if field in data:
-                setattr(asset, col, data[field])
+                setattr(asset, col, data[field] or None)
 
         if 'fmsExpiryDate' in data and data['fmsExpiryDate']:
             try:
