@@ -78,7 +78,17 @@ def _imported_asset_to_dict(row, source, index):
 
 
 def _fetch_imported_assets_for_employee(employee_code):
+    """
+    Query ACMS$ and FMS$ tables from the REMOTE cowmis database.
+    Must use the remote_pis engine — NOT the local Asset_Manager session.
+    """
     assets = []
+
+    # Use the remote cowmis engine explicitly (same engine used in auth.py)
+    remote_engine = db.engines.get('remote_pis')
+    if not remote_engine:
+        print("ERROR: remote_pis engine not configured — cannot fetch cowmis assets")
+        return assets
 
     for imported_table in IMPORTED_ASSET_TABLES:
         query = text(f"""
@@ -107,12 +117,17 @@ def _fetch_imported_assets_for_employee(employee_code):
             WHERE UPPER(LTRIM(RTRIM(CAST([{SYSTEM_CURRENT_USER_ECNO_COLUMN}] AS NVARCHAR(50))))) = :employee_code
             ORDER BY [SL No]
         """)
-        rows = db.session.execute(query, {'employee_code': employee_code}).mappings().all()
-        start_index = len(assets)
-        assets.extend([
-            _imported_asset_to_dict(row, imported_table['source'], start_index + index + 1)
-            for index, row in enumerate(rows)
-        ])
+        try:
+            with remote_engine.connect() as conn:
+                rows = conn.execute(query, {'employee_code': employee_code}).mappings().all()
+            start_index = len(assets)
+            assets.extend([
+                _imported_asset_to_dict(row, imported_table['source'], start_index + index + 1)
+                for index, row in enumerate(rows)
+            ])
+        except Exception as e:
+            print(f"Failed to query {imported_table['table']} from cowmis: {e}")
+            continue
 
     return assets
 
@@ -195,15 +210,26 @@ def create_app(config_class=Config):
         current_user_id = int(get_jwt_identity())
         current_user = User.query.get_or_404(current_user_id)
         employee_code = (current_user.emp_code or '').strip().upper()
-        if not employee_code:
-            return jsonify([]), 200
 
-        # Only return assets stored in the local Asset_Manager database
+        # Match by ECNO (populated from form field) OR by assigned_to user id
+        # Using OR so assets saved either way are always visible to the user
+        from sqlalchemy import or_
         app_assets = Asset.query.filter(
-            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
+            or_(
+                func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code,
+                Asset.assigned_to == current_user_id,
+            )
         ).all()
 
-        return jsonify([a.to_dict() for a in app_assets]), 200
+        # De-duplicate in case both conditions match the same asset
+        seen = set()
+        unique_assets = []
+        for a in app_assets:
+            if a.id not in seen:
+                seen.add(a.id)
+                unique_assets.append(a)
+
+        return jsonify([a.to_dict() for a in unique_assets]), 200
 
     @app.route('/api/assets/recommendations', methods=['GET'])
     @jwt_required()
