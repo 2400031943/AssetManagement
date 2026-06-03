@@ -414,9 +414,8 @@ def create_app(config_class=Config):
     @jwt_required()
     def get_my_assets():
         """
-        Return assets from the LOCAL Asset_Manager DB.
-        Queries dbo.ACMS and dbo.FMS tables (the real asset data tables)
-        filtering by [Asset Custodian ECNO_(Refer PIS Database)] = logged-in emp_code.
+        Return assets from dbo.assets (local Asset_Manager DB)
+        where asset_custodian_ecno matches the logged-in employee's ECNO.
         """
         current_user_id = int(get_jwt_identity())
         current_user    = User.query.get_or_404(current_user_id)
@@ -425,54 +424,127 @@ def create_app(config_class=Config):
         if not employee_code:
             return jsonify([]), 200
 
-        ecno_col = '[Asset Custodian ECNO_(Refer PIS Database)]'
-        filter_clause = f"WHERE UPPER(LTRIM(RTRIM({ecno_col}))) = :ec"
+        assets = Asset.query.filter(
+            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
+        ).all()
 
-        def fetch_table(table_name, source_label):
-            rows = db.session.execute(
-                text(f"""
+        return jsonify([a.to_dict() for a in assets]), 200
+
+    @app.route('/api/admin/import-assets', methods=['POST'])
+    def import_assets_from_acms_fms():
+        """
+        One-time import: copies all rows from dbo.ACMS and dbo.FMS
+        into dbo.assets so the assets table gets populated.
+        Call once from browser or Postman:
+            POST http://localhost:5000/api/admin/import-assets
+        Safe to call multiple times — skips rows already imported
+        (matches on serial_number + asset_custodian_ecno).
+        """
+        imported = 0
+        skipped  = 0
+        errors   = 0
+
+        def row_to_asset(row, source):
+            serial = _clean_value(row.get('serial_number'))
+            ecno   = _clean_value(row.get('asset_custodian_ecno'))
+            name   = (
+                _clean_value(row.get('asset_number')) or
+                serial or
+                _clean_value(row.get('category')) or
+                f"{source} Asset"
+            )
+
+            # Skip if already exists (same serial + ecno)
+            if serial and ecno:
+                exists = Asset.query.filter_by(
+                    serial_number        = serial,
+                    asset_custodian_ecno = ecno
+                ).first()
+                if exists:
+                    return None  # already imported
+
+            expiry = None
+            raw_expiry = _clean_value(row.get('warranty_expiry_date'))
+            if raw_expiry:
+                try:
+                    expiry = date.fromisoformat(raw_expiry[:10])
+                except Exception:
+                    pass
+
+            return Asset(
+                name                 = name,
+                serial_number        = serial,
+                category             = _clean_value(row.get('category')),
+                make                 = _clean_value(row.get('make')),
+                model                = _clean_value(row.get('model')),
+                configuration        = _clean_value(row.get('configuration')),
+                network_domain       = _clean_value(row.get('network_domain')),
+                ip_address           = _clean_value(row.get('ip_address')),
+                monitor              = _clean_value(row.get('monitor')),
+                asset_custodian_ecno = ecno,
+                user_division        = _clean_value(row.get('user_division')),
+                group_name           = _clean_value(row.get('group_name')),
+                area                 = _clean_value(row.get('area')),
+                location             = _clean_value(row.get('location')),
+                acms_fms             = _clean_value(row.get('acms_fms')) or source,
+                fms_expiry_date      = expiry,
+                status               = 'Assigned',
+            )
+
+        ecno_col = '[Asset Custodian ECNO_(Refer PIS Database)]'
+
+        for table_name, source_label in [('ACMS', 'ACMS'), ('FMS', 'FMS')]:
+            try:
+                rows = db.session.execute(text(f"""
                     SELECT
                         NULLIF(LTRIM(RTRIM(CAST([Asset Number_(Refer PIS Database)] AS NVARCHAR(255)))), '') AS asset_number,
-                        NULLIF(LTRIM(RTRIM(CAST([System Serial Number]             AS NVARCHAR(255)))), '') AS serial_number,
-                        NULLIF(LTRIM(RTRIM(CAST([Category]                         AS NVARCHAR(255)))), '') AS category,
-                        NULLIF(LTRIM(RTRIM(CAST([Make]                             AS NVARCHAR(255)))), '') AS make,
-                        NULLIF(LTRIM(RTRIM(CAST([Model]                            AS NVARCHAR(255)))), '') AS model,
-                        NULLIF(LTRIM(RTRIM(CAST([Brief Configuration]              AS NVARCHAR(MAX)))), '') AS configuration,
+                        NULLIF(LTRIM(RTRIM(CAST([System Serial Number]              AS NVARCHAR(255)))), '') AS serial_number,
+                        NULLIF(LTRIM(RTRIM(CAST([Category]                          AS NVARCHAR(255)))), '') AS category,
+                        NULLIF(LTRIM(RTRIM(CAST([Make]                              AS NVARCHAR(255)))), '') AS make,
+                        NULLIF(LTRIM(RTRIM(CAST([Model]                             AS NVARCHAR(255)))), '') AS model,
+                        NULLIF(LTRIM(RTRIM(CAST([Brief Configuration]               AS NVARCHAR(MAX)))), '') AS configuration,
                         NULLIF(LTRIM(RTRIM(CAST([Network Domain (Interent/Spacenet/NRSCVRF/DP etc)] AS NVARCHAR(255)))), '') AS network_domain,
-                        NULLIF(LTRIM(RTRIM(CAST([IP]                               AS NVARCHAR(255)))), '') AS ip_address,
-                        NULLIF(LTRIM(RTRIM(CAST([Monitor]                          AS NVARCHAR(255)))), '') AS monitor,
-                        NULLIF(LTRIM(RTRIM(CAST({ecno_col}                         AS NVARCHAR(255)))), '') AS asset_custodian_ecno,
-                        NULLIF(LTRIM(RTRIM(CAST([System-Current-User ECNO_(Refer Employee Directory)] AS NVARCHAR(255)))), '') AS current_user_ecno,
-                        NULLIF(LTRIM(RTRIM(CAST([User-Division _(Refer Employee Directory)]           AS NVARCHAR(255)))), '') AS user_division,
-                        NULLIF(LTRIM(RTRIM(CAST([Group]                            AS NVARCHAR(255)))), '') AS group_name,
-                        NULLIF(LTRIM(RTRIM(CAST([Area]                             AS NVARCHAR(255)))), '') AS area,
-                        NULLIF(LTRIM(RTRIM(CAST([Location]                         AS NVARCHAR(255)))), '') AS location,
-                        NULLIF(LTRIM(RTRIM(CAST([ACMS, FMS, FMS + ACMS]           AS NVARCHAR(255)))), '') AS acms_fms,
-                        NULLIF(LTRIM(RTRIM(CAST([Warranty  _Expiry Date]           AS NVARCHAR(255)))), '') AS warranty_expiry_date
+                        NULLIF(LTRIM(RTRIM(CAST([IP]                                AS NVARCHAR(255)))), '') AS ip_address,
+                        NULLIF(LTRIM(RTRIM(CAST([Monitor]                           AS NVARCHAR(255)))), '') AS monitor,
+                        NULLIF(LTRIM(RTRIM(CAST({ecno_col}                          AS NVARCHAR(255)))), '') AS asset_custodian_ecno,
+                        NULLIF(LTRIM(RTRIM(CAST([User-Division _(Refer Employee Directory)]          AS NVARCHAR(255)))), '') AS user_division,
+                        NULLIF(LTRIM(RTRIM(CAST([Group]                             AS NVARCHAR(255)))), '') AS group_name,
+                        NULLIF(LTRIM(RTRIM(CAST([Area]                              AS NVARCHAR(255)))), '') AS area,
+                        NULLIF(LTRIM(RTRIM(CAST([Location]                          AS NVARCHAR(255)))), '') AS location,
+                        NULLIF(LTRIM(RTRIM(CAST([ACMS, FMS, FMS + ACMS]            AS NVARCHAR(255)))), '') AS acms_fms,
+                        NULLIF(LTRIM(RTRIM(CAST([Warranty  _Expiry Date]            AS NVARCHAR(255)))), '') AS warranty_expiry_date
                     FROM dbo.[{table_name}]
-                    {filter_clause}
                     ORDER BY [SL No]
-                """),
-                {'ec': employee_code}
-            ).mappings().all()
-            return [
-                _imported_asset_to_dict(row, source_label, i + 1)
-                for i, row in enumerate(rows)
-            ]
+                """)).mappings().all()
 
-        try:
-            acms_assets = fetch_table('ACMS', 'ACMS')
-        except Exception as e:
-            print(f"Error reading dbo.ACMS: {e}")
-            acms_assets = []
+                for row in rows:
+                    try:
+                        asset = row_to_asset(dict(row), source_label)
+                        if asset is None:
+                            skipped += 1
+                        else:
+                            db.session.add(asset)
+                            imported += 1
+                    except Exception as e:
+                        print(f"Row error in {table_name}: {e}")
+                        errors += 1
 
-        try:
-            fms_assets = fetch_table('FMS', 'FMS')
-        except Exception as e:
-            print(f"Error reading dbo.FMS: {e}")
-            fms_assets = []
+                db.session.commit()
+                print(f"Imported from dbo.{table_name}: {imported} rows")
 
-        return jsonify(acms_assets + fms_assets), 200
+            except Exception as e:
+                db.session.rollback()
+                print(f"Failed to import dbo.{table_name}: {e}")
+                return jsonify({'error': f'Failed on {table_name}: {str(e)}'}), 500
+
+        total_in_assets = Asset.query.count()
+        return jsonify({
+            'status':               'done',
+            'imported':             imported,
+            'skipped_duplicates':   skipped,
+            'errors':               errors,
+            'total_in_dbo_assets':  total_in_assets,
+        }), 200
 
     @app.route('/api/assets/recommendations', methods=['GET'])
     @jwt_required()
