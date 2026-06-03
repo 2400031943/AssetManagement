@@ -367,49 +367,56 @@ def create_app(config_class=Config):
         """
         DEBUG — no auth needed. Call from browser:
         http://localhost:5000/api/debug/mine?emp_code=YOUR_CODE
+        Checks dbo.ACMS and dbo.FMS (the real local asset tables).
         """
         employee_code = request.args.get('emp_code', '').strip().upper()
 
         if not employee_code:
             return jsonify({'error': 'Pass ?emp_code=YOUR_CODE in the URL'}), 400
 
-        # All distinct asset_custodian_ecno values in the table
-        all_ecnos = db.session.execute(
-            text("SELECT DISTINCT asset_custodian_ecno FROM dbo.assets")
-        ).fetchall()
-        ecno_list = [r[0] for r in all_ecnos]
+        ecno_col = '[Asset Custodian ECNO_(Refer PIS Database)]'
 
-        # Total row count
-        total = db.session.execute(
-            text("SELECT COUNT(*) FROM dbo.assets")
+        acms_count = db.session.execute(
+            text(f"SELECT COUNT(*) FROM dbo.ACMS WHERE UPPER(LTRIM(RTRIM({ecno_col}))) = :ec"),
+            {'ec': employee_code}
         ).scalar()
 
-        # What the filter would return for this emp_code
-        matched = Asset.query.filter(
-            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
-        ).count()
+        fms_count = db.session.execute(
+            text(f"SELECT COUNT(*) FROM dbo.FMS WHERE UPPER(LTRIM(RTRIM({ecno_col}))) = :ec"),
+            {'ec': employee_code}
+        ).scalar()
 
-        # Sample of matched rows (first 5)
-        sample = Asset.query.filter(
-            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
-        ).limit(5).all()
+        # Sample 3 rows from ACMS
+        sample_rows = db.session.execute(
+            text(f"""
+                SELECT TOP 3
+                    [Asset Number_(Refer PIS Database)] AS asset_number,
+                    [System Serial Number] AS serial_number,
+                    [Category] AS category,
+                    [Make] AS make,
+                    {ecno_col} AS asset_custodian_ecno
+                FROM dbo.ACMS
+                WHERE UPPER(LTRIM(RTRIM({ecno_col}))) = :ec
+            """),
+            {'ec': employee_code}
+        ).mappings().all()
 
         return jsonify({
-            'emp_code_searched':      employee_code,
-            'total_assets_in_db':     total,
-            'distinct_ecnos_in_db':   ecno_list,
-            'matched_assets_count':   matched,
-            'sample_matched_assets':  [a.to_dict() for a in sample],
-            'filter_used': f"UPPER(LTRIM(RTRIM(asset_custodian_ecno))) = '{employee_code}'"
+            'emp_code_searched':   employee_code,
+            'acms_matched_rows':   acms_count,
+            'fms_matched_rows':    fms_count,
+            'total_matched':       (acms_count or 0) + (fms_count or 0),
+            'sample_acms':         [dict(r) for r in sample_rows],
+            'filter_column':       'Asset Custodian ECNO_(Refer PIS Database)',
         }), 200
 
     @app.route('/api/assets/mine', methods=['GET'])
     @jwt_required()
     def get_my_assets():
         """
-        Return assets from the LOCAL Asset_Manager DB (dbo.assets) where
-        asset_custodian_ecno matches the logged-in employee's ECNO.
-        Works for any alphanumeric employee code format.
+        Return assets from the LOCAL Asset_Manager DB.
+        Queries dbo.ACMS and dbo.FMS tables (the real asset data tables)
+        filtering by [Asset Custodian ECNO_(Refer PIS Database)] = logged-in emp_code.
         """
         current_user_id = int(get_jwt_identity())
         current_user    = User.query.get_or_404(current_user_id)
@@ -418,13 +425,54 @@ def create_app(config_class=Config):
         if not employee_code:
             return jsonify([]), 200
 
-        # SELECT * FROM dbo.assets
-        # WHERE UPPER(LTRIM(RTRIM(asset_custodian_ecno))) = '<emp_code>'
-        assets = Asset.query.filter(
-            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
-        ).all()
+        ecno_col = '[Asset Custodian ECNO_(Refer PIS Database)]'
+        filter_clause = f"WHERE UPPER(LTRIM(RTRIM({ecno_col}))) = :ec"
 
-        return jsonify([a.to_dict() for a in assets]), 200
+        def fetch_table(table_name, source_label):
+            rows = db.session.execute(
+                text(f"""
+                    SELECT
+                        NULLIF(LTRIM(RTRIM(CAST([Asset Number_(Refer PIS Database)] AS NVARCHAR(255)))), '') AS asset_number,
+                        NULLIF(LTRIM(RTRIM(CAST([System Serial Number]             AS NVARCHAR(255)))), '') AS serial_number,
+                        NULLIF(LTRIM(RTRIM(CAST([Category]                         AS NVARCHAR(255)))), '') AS category,
+                        NULLIF(LTRIM(RTRIM(CAST([Make]                             AS NVARCHAR(255)))), '') AS make,
+                        NULLIF(LTRIM(RTRIM(CAST([Model]                            AS NVARCHAR(255)))), '') AS model,
+                        NULLIF(LTRIM(RTRIM(CAST([Brief Configuration]              AS NVARCHAR(MAX)))), '') AS configuration,
+                        NULLIF(LTRIM(RTRIM(CAST([Network Domain (Interent/Spacenet/NRSCVRF/DP etc)] AS NVARCHAR(255)))), '') AS network_domain,
+                        NULLIF(LTRIM(RTRIM(CAST([IP]                               AS NVARCHAR(255)))), '') AS ip_address,
+                        NULLIF(LTRIM(RTRIM(CAST([Monitor]                          AS NVARCHAR(255)))), '') AS monitor,
+                        NULLIF(LTRIM(RTRIM(CAST({ecno_col}                         AS NVARCHAR(255)))), '') AS asset_custodian_ecno,
+                        NULLIF(LTRIM(RTRIM(CAST([System-Current-User ECNO_(Refer Employee Directory)] AS NVARCHAR(255)))), '') AS current_user_ecno,
+                        NULLIF(LTRIM(RTRIM(CAST([User-Division _(Refer Employee Directory)]           AS NVARCHAR(255)))), '') AS user_division,
+                        NULLIF(LTRIM(RTRIM(CAST([Group]                            AS NVARCHAR(255)))), '') AS group_name,
+                        NULLIF(LTRIM(RTRIM(CAST([Area]                             AS NVARCHAR(255)))), '') AS area,
+                        NULLIF(LTRIM(RTRIM(CAST([Location]                         AS NVARCHAR(255)))), '') AS location,
+                        NULLIF(LTRIM(RTRIM(CAST([ACMS, FMS, FMS + ACMS]           AS NVARCHAR(255)))), '') AS acms_fms,
+                        NULLIF(LTRIM(RTRIM(CAST([Warranty  _Expiry Date]           AS NVARCHAR(255)))), '') AS warranty_expiry_date
+                    FROM dbo.[{table_name}]
+                    {filter_clause}
+                    ORDER BY [SL No]
+                """),
+                {'ec': employee_code}
+            ).mappings().all()
+            return [
+                _imported_asset_to_dict(row, source_label, i + 1)
+                for i, row in enumerate(rows)
+            ]
+
+        try:
+            acms_assets = fetch_table('ACMS', 'ACMS')
+        except Exception as e:
+            print(f"Error reading dbo.ACMS: {e}")
+            acms_assets = []
+
+        try:
+            fms_assets = fetch_table('FMS', 'FMS')
+        except Exception as e:
+            print(f"Error reading dbo.FMS: {e}")
+            fms_assets = []
+
+        return jsonify(acms_assets + fms_assets), 200
 
     @app.route('/api/assets/recommendations', methods=['GET'])
     @jwt_required()
