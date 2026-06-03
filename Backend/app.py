@@ -311,6 +311,57 @@ def create_app(config_class=Config):
         assets = query.all()
         return jsonify([a.to_dict() for a in assets]), 200
 
+    @app.route('/api/debug/tables', methods=['GET'])
+    def debug_tables():
+        """
+        DEBUG — no auth needed. Call from browser:
+        http://localhost:5000/api/debug/tables
+        Lists all tables in the local Asset_Manager DB with row counts and columns.
+        Helps find where the actual asset data lives.
+        """
+        try:
+            # Get all tables and their row counts
+            tables_result = db.session.execute(text("""
+                SELECT
+                    t.TABLE_SCHEMA,
+                    t.TABLE_NAME,
+                    p.rows AS row_count
+                FROM INFORMATION_SCHEMA.TABLES t
+                LEFT JOIN sys.tables st ON st.name = t.TABLE_NAME
+                LEFT JOIN sys.partitions p ON p.object_id = st.object_id AND p.index_id IN (0,1)
+                WHERE t.TABLE_TYPE = 'BASE TABLE'
+                ORDER BY p.rows DESC, t.TABLE_NAME
+            """)).mappings().all()
+
+            tables_info = []
+            for t in tables_result:
+                table_full = f"{t['TABLE_SCHEMA']}.{t['TABLE_NAME']}"
+
+                # Get column names for this table
+                cols_result = db.session.execute(text("""
+                    SELECT COLUMN_NAME, DATA_TYPE
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :name
+                    ORDER BY ORDINAL_POSITION
+                """), {'schema': t['TABLE_SCHEMA'], 'name': t['TABLE_NAME']}).mappings().all()
+
+                columns = [f"{c['COLUMN_NAME']} ({c['DATA_TYPE']})" for c in cols_result]
+
+                tables_info.append({
+                    'table':      table_full,
+                    'row_count':  t['row_count'],
+                    'columns':    columns,
+                })
+
+            return jsonify({
+                'database':    'Asset_Manager (local)',
+                'table_count': len(tables_info),
+                'tables':      tables_info,
+            }), 200
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/debug/mine', methods=['GET'])
     def debug_my_assets():
         """
