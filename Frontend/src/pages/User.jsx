@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { LogOut, Database, LayoutDashboard, PlusCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getMyAssets, createAsset } from '../api';
+import { getStoredSession, clearStoredSession } from '../authSession';
 import MyAssets from '../components/MyAssets';
 import AddAsset from '../components/AddAsset';
 import './Dashboard.css';
 
 export default function User() {
   const navigate = useNavigate();
-  const loggedInUser = JSON.parse(localStorage.getItem('user') || '{"name": "User"}');
+  const { user: loggedInUser, token } = getStoredSession();
   const footerName = loggedInUser.employeeName || loggedInUser.name || loggedInUser.username || 'User';
   const footerDesignation = loggedInUser.designation || loggedInUser.role || 'User';
   const employeeCode = loggedInUser.emp_code || loggedInUser.empCode || '';
@@ -26,24 +27,40 @@ export default function User() {
       })
       .catch(err => {
         console.error('Failed to load assets:', err);
+        const message = (err?.message || '').toLowerCase();
+        if (
+          message.includes('missing authorization') ||
+          message.includes('unauthorized') ||
+          message.includes('token')
+        ) {
+          setError('Your session has expired. Please log in again.');
+          clearStoredSession();
+          navigate('/');
+          return;
+        }
         setError('Failed to load your assets. Please try again.');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [navigate]);
 
   // Fetch assets on mount and whenever the My Assets tab is activated
   useEffect(() => {
+    if (!token) {
+      clearStoredSession();
+      navigate('/');
+      return;
+    }
     if (activeTab === 'my-assets') {
       fetchMyAssets();
     }
-  }, [activeTab, fetchMyAssets]);
+  }, [activeTab, fetchMyAssets, navigate, token]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    clearStoredSession();
     navigate('/');
   };
 

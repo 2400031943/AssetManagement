@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { LogOut, Database, Users, Monitor, ArrowLeft, Search, Filter, Eye, FileText, MapPin } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getUsersByArea, getAssetsByArea } from '../api';
+import { getStoredUser, clearStoredSession } from '../authSession';
 import './Dashboard.css';
 
 export default function AreaAdmin() {
   const navigate = useNavigate();
-  const loggedInUser = JSON.parse(localStorage.getItem('user') || '{"name": "Area Admin", "area": ""}');
+  const loggedInUser = getStoredUser();
   const footerName = loggedInUser.employeeName || loggedInUser.name || loggedInUser.username || 'Area Admin';
   const footerDesignation = loggedInUser.designation || 'Area Admin';
   const assignedArea = loggedInUser.area || 'All Areas';
@@ -31,7 +32,7 @@ export default function AreaAdmin() {
   }, [assignedArea]);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    clearStoredSession();
     navigate('/');
   };
 

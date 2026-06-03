@@ -1,3 +1,5 @@
+import { getStoredToken, getStoredUser } from './authSession';
+
 /**
  * api.js  —  Centralized API service
  *
@@ -16,8 +18,7 @@ const BASE_URL = 'http://localhost:5000/api'; // ← Flask backend URL
 // ---------------------------------------------------------------------------
 
 function getToken() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  return user.token || null;
+  return getStoredToken();
 }
 
 async function apiFetch(path, options = {}) {
@@ -29,8 +30,8 @@ async function apiFetch(path, options = {}) {
     },
     ...options,
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'API error');
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.msg || 'API error');
   return data;
 }
 
@@ -145,7 +146,7 @@ export async function getUsersByArea(area) {
 export async function getMyAssets() {
   if (USE_MOCK) {
     await delay();
-    const me = JSON.parse(localStorage.getItem('user') || '{}');
+    const me = getStoredUser();
     const employeeCode = (me.emp_code || '').trim().toUpperCase();
     // My Assets — returns from local Asset_Manager DB (mocked as MOCK_ASSETS)
     return MOCK_ASSETS.filter(a => (
@@ -162,7 +163,7 @@ export async function getMyAssets() {
 export async function getAssetRecommendations() {
   if (USE_MOCK) {
     await delay();
-    const me = JSON.parse(localStorage.getItem('user') || '{}');
+    const me = getStoredUser();
     const employeeCode = (me.emp_code || '').trim().toUpperCase();
     // Simulate remote cowmis data — same mock pool but tagged as remote recommendations
     return MOCK_ASSETS
