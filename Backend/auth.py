@@ -170,13 +170,17 @@ def login():
             return jsonify({"error": "Invalid credentials or user not found in PIS system"}), 401
 
     except Exception as e:
-        # Fallback if the Stored Procedure fails or doesn't exist yet
+        # Fallback if cowmis is unreachable
         print(f"PIS Stored Procedure failed: {e}")
-        
+
         # Fallback to local database password check
         user = User.query.filter_by(emp_code=emp_code).first()
-        if not user or not user.check_password(password):
-            return jsonify({"error": "Invalid credentials (local fallback failed)"}), 401
+        if not user:
+            return jsonify({"error": "User not found. Set a local password first via /api/debug/set-password"}), 401
+        if not user.password_hash:
+            return jsonify({"error": "No local password set. Call /api/debug/set-password to set one."}), 401
+        if not user.check_password(password):
+            return jsonify({"error": "Invalid local password"}), 401
         pis_verified = True
 
     # 2. If verified (via PIS or fallback), ensure user exists locally
