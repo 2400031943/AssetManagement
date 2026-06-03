@@ -294,6 +294,47 @@ def create_app(config_class=Config):
             'message':  f"Local password set. You can now login with emp_code={emp_code} using this password when cowmis is unreachable.",
         }), 200
 
+    @app.route('/api/debug/insert-test-asset', methods=['POST'])
+    def insert_test_asset():
+        """
+        DEBUG — inserts a test asset into dbo.assets for a given emp_code.
+        Call from PowerShell:
+          Invoke-RestMethod -Uri "http://localhost:5000/api/debug/insert-test-asset" `
+            -Method POST -ContentType "application/json" `
+            -Body '{"emp_code":"NR02491"}'
+        """
+        data     = request.get_json()
+        emp_code = (data.get('emp_code') or '').strip().upper()
+        if not emp_code:
+            return jsonify({'error': 'emp_code is required'}), 400
+
+        asset = Asset(
+            name                 = f'Test Asset for {emp_code}',
+            serial_number        = f'TEST-SN-{emp_code}',
+            category             = 'PC TYPE 1',
+            make                 = 'Dell',
+            model                = 'Test Model',
+            configuration        = '8GB RAM, 256GB SSD',
+            network_domain       = 'ASDMLAN',
+            ip_address           = '192.168.1.100',
+            monitor              = 'Dell 24"',
+            asset_custodian_ecno = emp_code,
+            user_division        = 'TEST DIVISION',
+            group_name           = 'TEST GROUP',
+            area                 = 'Balanagar',
+            location             = 'Test Location',
+            acms_fms             = 'ACMS',
+            status               = 'Assigned',
+        )
+        db.session.add(asset)
+        db.session.commit()
+
+        return jsonify({
+            'status':   'done',
+            'message':  f'Test asset inserted into dbo.assets with asset_custodian_ecno = {emp_code}',
+            'asset':    asset.to_dict(),
+        }), 201
+
     # -----------------------------------------------------------------------
     # USER endpoints
     # -----------------------------------------------------------------------
