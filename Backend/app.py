@@ -262,6 +262,38 @@ def create_app(config_class=Config):
     def health_check():
         return jsonify({"status": "healthy", "message": "Asset Management API is running"}), 200
 
+    @app.route('/api/debug/set-password', methods=['POST'])
+    def set_local_password():
+        """
+        DEBUG — sets a local password so you can login when cowmis is unreachable.
+        Call from PowerShell:
+          Invoke-RestMethod -Uri "http://localhost:5000/api/debug/set-password" `
+            -Method POST -ContentType "application/json" `
+            -Body '{"emp_code":"NR02491","password":"yourpassword"}'
+        After running this, login normally on the frontend with that password.
+        """
+        data     = request.get_json()
+        emp_code = (data.get('emp_code') or '').strip().upper()
+        password = data.get('password') or ''
+
+        if not emp_code or not password:
+            return jsonify({'error': 'emp_code and password are required'}), 400
+
+        user = User.query.filter_by(emp_code=emp_code).first()
+        if not user:
+            # Auto-create the user if not yet in local DB
+            user = User(username=emp_code, emp_code=emp_code, role='User')
+            db.session.add(user)
+
+        user.set_password(password)
+        db.session.commit()
+
+        return jsonify({
+            'status':   'done',
+            'emp_code': emp_code,
+            'message':  f"Local password set. You can now login with emp_code={emp_code} using this password when cowmis is unreachable.",
+        }), 200
+
     # -----------------------------------------------------------------------
     # USER endpoints
     # -----------------------------------------------------------------------
