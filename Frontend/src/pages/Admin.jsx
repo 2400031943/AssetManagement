@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LogOut, Database, Users, Server, Activity, LayoutDashboard, Monitor, Laptop } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getAllUsers, getAllAssets } from '../api';
+import { getStoredUser, clearStoredSession } from '../authSession';
 import AdminUsers from '../components/AdminUsers';
 import AdminAssets from '../components/AdminAssets';
 import MyAssets from '../components/MyAssets';
@@ -9,7 +10,7 @@ import './Dashboard.css';
 
 export default function Admin() {
   const navigate = useNavigate();
-  const loggedInUser = JSON.parse(localStorage.getItem('user') || '{"name": "Admin"}');
+  const loggedInUser = getStoredUser();
   const footerName = loggedInUser.employeeName || loggedInUser.name || loggedInUser.username || 'Admin';
   const footerDesignation = loggedInUser.designation || 'Administrator';
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -30,7 +31,7 @@ export default function Admin() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    clearStoredSession();
     navigate('/');
   };
 

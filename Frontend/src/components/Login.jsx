@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BadgeCheck, Lock, User, Shield, ArrowRight, CheckCircle2, AlertCircle, Database, MapPin } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { login as apiLogin } from '../api';
+import { setStoredSession } from '../authSession';
 import './Login.css';
 
 export default function Login() {
@@ -41,15 +42,14 @@ export default function Login() {
       const designation = user.designation || user.DESGFULLNAME || user.role || '';
 
       // Persist session
-      localStorage.setItem('user', JSON.stringify({
+      setStoredSession({
         ...user,
         name: displayName,
         employeeName: displayName,
         designation,
         emp_code: user.emp_code || employeeCode,
-        token,
         area: role === 'area-admin' ? selectedArea : (user.area || null),
-      }));
+      }, token);
 
       if (role === 'admin') {
         setStatus({ type: 'success', message: 'Admin Authentication successful!' });
