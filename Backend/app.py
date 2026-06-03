@@ -312,18 +312,17 @@ def create_app(config_class=Config):
         return jsonify([a.to_dict() for a in assets]), 200
 
     @app.route('/api/debug/mine', methods=['GET'])
-    @jwt_required()
     def debug_my_assets():
         """
-        DEBUG ONLY — remove before going to production.
-        Shows exactly what emp_code the JWT resolves to, all ecno values
-        in dbo.assets, and whether any match — helps diagnose empty My Assets.
+        DEBUG — no auth needed. Call from browser:
+        http://localhost:5000/api/debug/mine?emp_code=YOUR_CODE
         """
-        current_user_id = int(get_jwt_identity())
-        current_user    = User.query.get_or_404(current_user_id)
-        employee_code   = (current_user.emp_code or '').strip().upper()
+        employee_code = request.args.get('emp_code', '').strip().upper()
 
-        # All distinct asset_custodian_ecno values currently in the table
+        if not employee_code:
+            return jsonify({'error': 'Pass ?emp_code=YOUR_CODE in the URL'}), 400
+
+        # All distinct asset_custodian_ecno values in the table
         all_ecnos = db.session.execute(
             text("SELECT DISTINCT asset_custodian_ecno FROM dbo.assets")
         ).fetchall()
@@ -334,18 +333,23 @@ def create_app(config_class=Config):
             text("SELECT COUNT(*) FROM dbo.assets")
         ).scalar()
 
-        # What the filter would return
+        # What the filter would return for this emp_code
         matched = Asset.query.filter(
             func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
         ).count()
 
+        # Sample of matched rows (first 5)
+        sample = Asset.query.filter(
+            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
+        ).limit(5).all()
+
         return jsonify({
-            'jwt_user_id':    current_user_id,
-            'emp_code_used':  employee_code,
-            'total_assets_in_db': total,
-            'distinct_ecnos_in_db': ecno_list,
-            'matched_assets': matched,
-            'message': f"Filter: UPPER(LTRIM(RTRIM(asset_custodian_ecno))) = '{employee_code}'"
+            'emp_code_searched':      employee_code,
+            'total_assets_in_db':     total,
+            'distinct_ecnos_in_db':   ecno_list,
+            'matched_assets_count':   matched,
+            'sample_matched_assets':  [a.to_dict() for a in sample],
+            'filter_used': f"UPPER(LTRIM(RTRIM(asset_custodian_ecno))) = '{employee_code}'"
         }), 200
 
     @app.route('/api/assets/mine', methods=['GET'])
