@@ -311,6 +311,43 @@ def create_app(config_class=Config):
         assets = query.all()
         return jsonify([a.to_dict() for a in assets]), 200
 
+    @app.route('/api/debug/mine', methods=['GET'])
+    @jwt_required()
+    def debug_my_assets():
+        """
+        DEBUG ONLY — remove before going to production.
+        Shows exactly what emp_code the JWT resolves to, all ecno values
+        in dbo.assets, and whether any match — helps diagnose empty My Assets.
+        """
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        employee_code   = (current_user.emp_code or '').strip().upper()
+
+        # All distinct asset_custodian_ecno values currently in the table
+        all_ecnos = db.session.execute(
+            text("SELECT DISTINCT asset_custodian_ecno FROM dbo.assets")
+        ).fetchall()
+        ecno_list = [r[0] for r in all_ecnos]
+
+        # Total row count
+        total = db.session.execute(
+            text("SELECT COUNT(*) FROM dbo.assets")
+        ).scalar()
+
+        # What the filter would return
+        matched = Asset.query.filter(
+            func.upper(func.ltrim(func.rtrim(Asset.asset_custodian_ecno))) == employee_code
+        ).count()
+
+        return jsonify({
+            'jwt_user_id':    current_user_id,
+            'emp_code_used':  employee_code,
+            'total_assets_in_db': total,
+            'distinct_ecnos_in_db': ecno_list,
+            'matched_assets': matched,
+            'message': f"Filter: UPPER(LTRIM(RTRIM(asset_custodian_ecno))) = '{employee_code}'"
+        }), 200
+
     @app.route('/api/assets/mine', methods=['GET'])
     @jwt_required()
     def get_my_assets():
