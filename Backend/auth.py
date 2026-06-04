@@ -5,35 +5,9 @@ from models import db, User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
-EMPLOYEE_PROFILE_VIEW = 'TBAD_EMPFUNCDESG_VIEW'
-EMPLOYEE_NAME_COLUMN = 'EMPLOYEENAME'
-EMPLOYEE_DESIGNATION_COLUMN = 'DESGFULLNAME'
-EMPLOYEE_CODE_COLUMN_CANDIDATES = (
-    'ECNO',
-    'EC_NO',
-    'EMPCODE',
-    'EMP_CODE',
-    'EMPCD',
-    'EMP_CD',
-    'EMPLOYEECODE',
-    'EMPLOYEE_CODE',
-    'EMPLOYEECD',
-    'EMPLOYEE_CD',
-    'EMPLOYEENO',
-    'EMPLOYEE_NO',
-    'EMPLOYEENUMBER',
-    'EMPLOYEE_NUMBER',
-    'EMPNO',
-    'EMP_NO',
-    'EMPNUMBER',
-    'EMP_NUMBER',
-    'EMPID',
-    'EMP_ID',
-    'USERID',
-    'USER_ID',
-    'LOGINID',
-    'LOGIN_ID',
-)
+EMPLOYEE_PROFILE_VIEW        = 'VIEWEMPINFO'
+EMPLOYEE_CODE_COLUMN        = 'EMPLOYEECODE'
+EMPLOYEE_NAME_COLUMN        = 'EMPLOYEENAME'
 
 
 def _quote_identifier(identifier):
@@ -76,69 +50,38 @@ def _query_employee_profile(conn, emp_code, schema_name, emp_code_column, employ
 
 
 def fetch_employee_profile(emp_code):
-    """Fetch employee display data from the remote PIS view for the footer."""
-    engine = db.engines['remote_pis']
-    emp_code = emp_code.strip().upper()
-    fallback_schemas = [None]
-
+    """
+    Fetch EMPLOYEECODE and EMPLOYEENAME from VIEWEMPINFO in the remote cowmis DB.
+    Returns dict with employeeCode and employeeName keys.
+    """
     try:
+        engine = db.engines['remote_pis']
+        emp_code = emp_code.strip().upper()
+
+        query = text(f"""
+            SELECT TOP 1
+                NULLIF(LTRIM(RTRIM(CAST([{EMPLOYEE_CODE_COLUMN}] AS NVARCHAR(50)))),  '') AS employee_code,
+                NULLIF(LTRIM(RTRIM(CAST([{EMPLOYEE_NAME_COLUMN}] AS NVARCHAR(255)))), '') AS employee_name
+            FROM [{EMPLOYEE_PROFILE_VIEW}]
+            WHERE UPPER(LTRIM(RTRIM(CAST([{EMPLOYEE_CODE_COLUMN}] AS NVARCHAR(50))))) = :ec
+        """)
+
         with engine.connect() as conn:
-            columns = conn.execute(
-                text("""
-                    SELECT TABLE_SCHEMA, COLUMN_NAME
-                    FROM INFORMATION_SCHEMA.COLUMNS
-                    WHERE UPPER(TABLE_NAME) = :view_name
-                    ORDER BY TABLE_SCHEMA, ORDINAL_POSITION
-                """),
-                {"view_name": EMPLOYEE_PROFILE_VIEW}
-            ).mappings().all()
+            row = conn.execute(query, {'ec': emp_code}).mappings().first()
 
-        columns_by_schema = {}
-        for column in columns:
-            columns_by_schema.setdefault(column["TABLE_SCHEMA"], []).append(column["COLUMN_NAME"])
-        fallback_schemas = list(columns_by_schema.keys()) or [None]
+        if not row:
+            print(f"INFO: No profile found in {EMPLOYEE_PROFILE_VIEW} for {emp_code}")
+            return {}
 
-        for schema_name, schema_columns in columns_by_schema.items():
-            emp_code_column = _find_column(schema_columns, EMPLOYEE_CODE_COLUMN_CANDIDATES)
-            employee_name_column = _find_column(schema_columns, (EMPLOYEE_NAME_COLUMN,))
-            designation_column = _find_column(schema_columns, (EMPLOYEE_DESIGNATION_COLUMN,))
-
-            if not (emp_code_column and employee_name_column and designation_column):
-                continue
-
-            with engine.connect() as conn:
-                profile = _query_employee_profile(
-                    conn,
-                    emp_code,
-                    schema_name,
-                    emp_code_column,
-                    employee_name_column,
-                    designation_column,
-                )
-            if profile:
-                return profile
+        return {
+            'employeeCode': row.get('employee_code') or emp_code,
+            'employeeName': row.get('employee_name') or emp_code,
+            'EMPLOYEECODE': row.get('employee_code') or emp_code,
+            'EMPLOYEENAME': row.get('employee_name') or emp_code,
+        }
     except Exception as e:
-        print(f"Employee profile lookup via metadata failed: {e}")
-
-    # Fallback for environments where INFORMATION_SCHEMA is restricted.
-    for schema_name in fallback_schemas:
-        for emp_code_column in EMPLOYEE_CODE_COLUMN_CANDIDATES:
-            try:
-                with engine.connect() as conn:
-                    profile = _query_employee_profile(
-                        conn,
-                        emp_code,
-                        schema_name,
-                        emp_code_column,
-                        EMPLOYEE_NAME_COLUMN,
-                        EMPLOYEE_DESIGNATION_COLUMN,
-                    )
-                if profile:
-                    return profile
-            except Exception:
-                continue
-
-    return {}
+        print(f"ERROR: fetch_employee_profile failed: {e}")
+        return {}
 
 @auth_bp.route('/login', methods=['POST'])
 def login():

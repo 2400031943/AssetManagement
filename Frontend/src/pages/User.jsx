@@ -10,9 +10,9 @@ import './Dashboard.css';
 export default function User() {
   const navigate = useNavigate();
   const { user: loggedInUser, token } = getStoredSession();
-  const footerName = loggedInUser.employeeName || loggedInUser.name || loggedInUser.username || 'User';
-  const footerDesignation = loggedInUser.designation || loggedInUser.role || 'User';
   const employeeCode = loggedInUser.emp_code || loggedInUser.empCode || '';
+  const footerName = loggedInUser.employeeName || loggedInUser.EMPLOYEENAME || loggedInUser.name || loggedInUser.username || employeeCode;
+  const footerCode = loggedInUser.employeeCode || loggedInUser.EMPLOYEECODE || loggedInUser.emp_code || employeeCode;
   const [activeTab, setActiveTab] = useState('my-assets');
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -117,7 +117,7 @@ export default function User() {
             <div className="user-profile-icon">{footerName.charAt(0).toUpperCase()}</div>
             <div className="user-profile-info">
               <span className="user-profile-name">{footerName}</span>
-              <span className="user-profile-role">{footerDesignation}</span>
+              <span className="user-profile-role" style={{ fontSize: '0.78rem', opacity: 0.7 }}>{footerCode}</span>
             </div>
           </div>
           <button onClick={handleLogout} className="logout-btn full-width" style={{ marginTop: '0.5rem' }}>
