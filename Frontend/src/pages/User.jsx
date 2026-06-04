@@ -86,7 +86,7 @@ export default function User() {
       <aside className="sidebar glass-panel">
         <div className="sidebar-header">
           <Database className="dashboard-logo-icon" size={28} />
-          <span className="sidebar-title">Asset Manager</span>
+          <span className="sidebar-title">ACMS Systems Management</span>
         </div>
 
         <nav className="sidebar-nav">

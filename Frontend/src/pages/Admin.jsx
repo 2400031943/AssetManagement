@@ -61,7 +61,7 @@ export default function Admin() {
         <div className="sidebar-header">
           <Database className="dashboard-logo-icon" size={28} />
           <span className="sidebar-title">
-            Asset Manager <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>| Admin</span>
+            ACMS Systems Management <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>| Admin</span>
           </span>
         </div>
 

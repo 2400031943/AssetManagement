@@ -132,7 +132,7 @@ export default function AddAsset({ onAddAsset }) {
 
     try {
       await onAddAsset(payload);
-      setStatus({ type: 'success', message: 'Asset saved to Asset Manager successfully!' });
+      setStatus({ type: 'success', message: 'Asset saved to ACMS Systems Management successfully!' });
       setFormData(EMPTY_FORM);
       setSelectedRecId(null);
       setTimeout(() => setStatus({ type: null, message: '' }), 3000);
@@ -471,7 +471,7 @@ export default function AddAsset({ onAddAsset }) {
         <div className="form-actions">
           <button type="submit" className="submit-btn login-btn" disabled={status.type === 'loading'}>
             <Save size={18} />
-            <span>{status.type === 'loading' ? 'Saving…' : 'Save to Asset Manager'}</span>
+            <span>{status.type === 'loading' ? 'Saving…' : 'Save to ACMS Systems Management'}</span>
           </button>
         </div>
 

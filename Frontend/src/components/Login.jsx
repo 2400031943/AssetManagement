@@ -82,7 +82,7 @@ export default function Login() {
 
         <div className="login-header">
           <div className="login-logo-wrapper"><Database size={32} /></div>
-          <h1 className="login-title">Asset Manager</h1>
+          <h1 className="login-title">ACMS Systems Management</h1>
           <p className="login-subtitle">Find your Assets with ease</p>
         </div>
 
