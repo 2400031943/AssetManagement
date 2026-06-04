@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Sparkles, Database, ChevronRight, Loader2, ServerCrash, CheckCircle2 } from 'lucide-react';
+import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2 } from 'lucide-react';
 import { getAssetRecommendations } from '../api';
 import '../pages/Dashboard.css';
 
@@ -16,37 +16,7 @@ function recommendationToForm(rec) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Recommendation Card component
-// ─────────────────────────────────────────────────────────────────────────────
-function RecommendationCard({ rec, isSelected, onClick }) {
-  return (
-    <button
-      type="button"
-      className={`rec-card ${isSelected ? 'rec-card--selected' : ''}`}
-      onClick={() => onClick(rec)}
-      title="Click to pre-fill Serial Number and Configuration"
-    >
-      <div className="rec-card-header">
-        <span className="acms-badge acms">TBST_ASSETS</span>
-        {isSelected && <CheckCircle2 size={16} className="rec-card-check" />}
-      </div>
-      <div className="rec-card-name">
-        {rec.serialNumber ? <><strong>S/N:</strong> {rec.serialNumber}</> : '— No Serial Number —'}
-      </div>
-      {rec.configuration && (
-        <div className="rec-card-meta" style={{ marginTop: '0.4rem', fontSize: '0.82rem', opacity: 0.8 }}>
-          <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {rec.configuration.length > 120 ? rec.configuration.slice(0, 120) + '…' : rec.configuration}
-          </span>
-        </div>
-      )}
-      <div className="rec-card-cta">
-        Fill Serial No. &amp; Configuration <ChevronRight size={14} />
-      </div>
-    </button>
-  );
-}
+// RecommendationCard removed — now using a dropdown select instead
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main AddAsset component
@@ -69,6 +39,12 @@ const EMPTY_FORM = {
   CATEGORY: '', CATEGORYOther: '',
   LOCATION: '', LOCATIONOther: '',
 };
+
+// Truncate long text for dropdown labels
+function truncate(str, n) {
+  if (!str) return '';
+  return str.length > n ? str.slice(0, n) + '…' : str;
+}
 
 export default function AddAsset({ onAddAsset }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -93,18 +69,6 @@ export default function AddAsset({ onAddAsset }) {
       })
       .finally(() => setRecLoading(false));
   }, []);
-
-  // ── Auto-fill form when a recommendation card is clicked ───────────────────
-  const handleRecommendationClick = (rec) => {
-    if (selectedRecId === rec.id) {
-      // Deselect — clear form
-      setSelectedRecId(null);
-      setFormData(EMPTY_FORM);
-    } else {
-      setSelectedRecId(rec.id);
-      setFormData(recommendationToForm(rec));
-    }
-  };
 
   // ── Form handlers ──────────────────────────────────────────────────────────
   const handleChange = (e) => {
@@ -150,12 +114,12 @@ export default function AddAsset({ onAddAsset }) {
         <div>
           <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>Add System to ACMS List</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Select a recommendation from the <strong>cowmis</strong> database or fill in the form manually.
+            Select a recommendation from <strong>COINS</strong> to pre-fill Serial Number &amp; Configuration, then fill in the remaining fields.
           </p>
         </div>
       </div>
 
-      {/* ── Recommendations Panel ──────────────────────────────────────────── */}
+      {/* ── Recommendations Dropdown Panel ─────────────────────────────────── */}
       <div className="rec-panel glass-panel" style={{ marginBottom: '2rem' }}>
         <div className="rec-panel-header">
           <div className="rec-panel-title">
@@ -170,7 +134,7 @@ export default function AddAsset({ onAddAsset }) {
         {recLoading && (
           <div className="rec-loading">
             <Loader2 size={20} className="rec-spinner" />
-            <span>Fetching your assets from cowmis database…</span>
+            <span>Fetching your assets from COINS database…</span>
           </div>
         )}
 
@@ -178,35 +142,60 @@ export default function AddAsset({ onAddAsset }) {
         {!recLoading && recError && (
           <div className="rec-error">
             <ServerCrash size={18} />
-            <span>Could not reach the cowmis database. You can still fill the form manually.</span>
+            <span>Could not reach the COINS database. You can still fill the form manually.</span>
           </div>
         )}
 
-        {/* Empty — no assets found for this employee */}
+        {/* Empty */}
         {!recLoading && !recError && recommendations.length === 0 && (
           <div className="rec-empty">
-            No assets found for your employee code in cowmis.
-            Please fill in the form below manually.
+            No assets found for your employee code in COINS. Please fill in the form below manually.
           </div>
         )}
 
-        {/* Recommendation cards */}
+        {/* ── Dropdown ── */}
         {!recLoading && !recError && recommendations.length > 0 && (
-          <>
-            <p className="rec-hint">
-              Click a card to auto-fill the form below. Click again to deselect.
-            </p>
-            <div className="rec-scroll">
+          <div style={{ padding: '0 1rem 1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              Select an asset from COINS to pre-fill Serial Number &amp; Configuration:
+            </label>
+            <select
+              className="login-input"
+              style={{ width: '100%' }}
+              value={selectedRecId || ''}
+              onChange={e => {
+                const id = e.target.value;
+                if (!id) {
+                  setSelectedRecId(null);
+                  setFormData(prev => ({ ...prev, serialNumber: '', configuration: '' }));
+                } else {
+                  const rec = recommendations.find(r => r.id === id);
+                  if (rec) {
+                    setSelectedRecId(id);
+                    setFormData(prev => ({
+                      ...prev,
+                      serialNumber:  rec.serialNumber  || '',
+                      configuration: rec.configuration || '',
+                    }));
+                  }
+                }
+              }}
+            >
+              <option value="">— Select an asset from COINS —</option>
               {recommendations.map(rec => (
-                <RecommendationCard
-                  key={rec.id}
-                  rec={rec}
-                  isSelected={selectedRecId === rec.id}
-                  onClick={handleRecommendationClick}
-                />
+                <option key={rec.id} value={rec.id}>
+                  {rec.serialNumber || '(No Serial)'}
+                  {rec.configuration ? ` — ${truncate(rec.configuration, 80)}` : ''}
+                </option>
               ))}
-            </div>
-          </>
+            </select>
+            {selectedRecId && (
+              <div className="rec-autofill-notice" style={{ marginTop: '0.75rem' }}>
+                <CheckCircle2 size={15} />
+                Serial Number &amp; Configuration pre-filled — please fill the remaining fields manually.
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -219,13 +208,6 @@ export default function AddAsset({ onAddAsset }) {
 
       {/* ── Asset Form ────────────────────────────────────────────────────── */}
       <form className="asset-form glass-panel" onSubmit={handleSubmit}>
-
-        {selectedRecId && (
-          <div className="rec-autofill-notice">
-            <CheckCircle2 size={16} />
-            Serial Number &amp; Configuration pre-filled from cowmis — please fill the remaining fields manually.
-          </div>
-        )}
 
         <div className="form-grid">
 
