@@ -290,6 +290,58 @@ def create_app(config_class=Config):
         assets = query.all()
         return jsonify([a.to_dict() for a in assets]), 200
 
+    @app.route('/api/debug/coins', methods=['GET'])
+    def debug_coins():
+        """
+        DEBUG — no auth. Check what TBST_ASSETS returns from cowmis.
+        Call from browser:
+        http://localhost:5000/api/debug/coins?emp_code=NR02491
+        Shows raw EQSRLNO and EQPTDESCP values.
+        """
+        emp_code = request.args.get('emp_code', '').strip().upper()
+        if not emp_code:
+            return jsonify({'error': 'Pass ?emp_code=YOUR_CODE'}), 400
+
+        remote_engine = db.engines.get('remote_pis')
+        if not remote_engine:
+            return jsonify({'error': 'remote_pis engine not configured'}), 500
+
+        try:
+            with remote_engine.connect() as conn:
+                # Check total rows in TBST_ASSETS first
+                total = conn.execute(text("SELECT COUNT(*) FROM [TBST_ASSETS]")).scalar()
+
+                # Fetch matching rows
+                rows = conn.execute(text("""
+                    SELECT TOP 10
+                        [EQSRLNO],
+                        [EQPTDESCP],
+                        [ACUSTODIAN],
+                        [USERID]
+                    FROM [TBST_ASSETS]
+                    WHERE
+                        UPPER(LTRIM(RTRIM(CAST([ACUSTODIAN] AS NVARCHAR(50))))) = :ec
+                        OR
+                        UPPER(LTRIM(RTRIM(CAST([USERID]     AS NVARCHAR(50))))) = :ec
+                """), {'ec': emp_code}).mappings().all()
+
+            return jsonify({
+                'emp_code':         emp_code,
+                'total_in_table':   total,
+                'matched_rows':     len(rows),
+                'rows': [
+                    {
+                        'EQSRLNO':    r['EQSRLNO'],
+                        'EQPTDESCP':  r['EQPTDESCP'],
+                        'ACUSTODIAN': r['ACUSTODIAN'],
+                        'USERID':     r['USERID'],
+                    }
+                    for r in rows
+                ]
+            }), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/debug/tables', methods=['GET'])
     def debug_tables():
         """
