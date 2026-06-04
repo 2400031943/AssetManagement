@@ -12,77 +12,80 @@ from auth import auth_bp
 
 
 # ===========================================================================
-# COWMIS REMOTE DB — ADD ASSET RECOMMENDATIONS CONFIGURATION
+# COWMIS REMOTE DB — ADD ASSET RECOMMENDATIONS (TBST_ASSETS)
 # ===========================================================================
-# TODO: Replace ALL placeholder values below with the actual table/column
-#       names from the remote cowmis database once you have access to it.
-#
-# HOW TO EDIT:
-#   1. Open SQL Server Management Studio → connect to 192.168.237.235 (cowmis)
-#   2. Find the table(s) that contain asset records
-#   3. Replace each  <<<PLACEHOLDER>>>  value with the real name
-#   4. Save this file and restart the Flask server — no other changes needed
+# Recommendations are fetched from TBST_ASSETS in cowmis where:
+#   ACUSTODIAN = emp_code  OR  USERID = emp_code
+# Only EQSRLNO and EQPTDESCP are shown on the recommendation card.
+# Clicking a card pre-fills:
+#   EQSRLNO    → System Serial Number field
+#   EQPTDESCP  → Brief Configuration field
 # ===========================================================================
 
-# ── EMPLOYEE CODE FILTER COLUMN ─────────────────────────────────────────────
-# The column in the remote table whose value is matched against the
-# logged-in employee's ECNO to fetch THEIR assets as recommendations.
-# TODO: Replace with the actual column name that stores the employee/user ECNO
-COWMIS_EMPLOYEE_CODE_COLUMN = '<<<REPLACE: column name that holds employee ECNO>>>'
-# Example: COWMIS_EMPLOYEE_CODE_COLUMN = 'EMP_CODE'
-# Example: COWMIS_EMPLOYEE_CODE_COLUMN = 'ECNO'
+COWMIS_ASSETS_TABLE      = 'TBST_ASSETS'
+COWMIS_SERIAL_COL        = 'EQSRLNO'
+COWMIS_DESCRIPTION_COL   = 'EQPTDESCP'
+COWMIS_CUSTODIAN_COL     = 'ACUSTODIAN'   # primary employee code column
+COWMIS_USERID_COL        = 'USERID'       # secondary employee code column
 
-# ── RECOMMENDATION TABLE(S) ──────────────────────────────────────────────────
-# Each entry below defines one table to query for recommendations.
-# You can have one table or multiple — add/remove entries as needed.
-# Fields in each entry:
-#   source  → Label shown on the recommendation card (e.g. 'ACMS', 'FMS', 'IT Assets')
-#   table   → Exact table name in cowmis (e.g. 'dbo.MyTable' or just 'MyTable')
-#   columns → dict mapping internal field name → actual column name in that table
-#             Leave a column as None if it does not exist in that table
-COWMIS_RECOMMENDATION_TABLES = [
-    {
-        # TODO: Replace 'source' with a short label for this table (shown on UI card)
-        'source': 'COWMIS',
 
-        # TODO: Replace with the actual table name in the cowmis DB
-        'table': '<<<REPLACE: table name in cowmis>>>',
-        # Example: 'table': 'dbo.IT_ASSETS'
-        # Example: 'table': 'ASSET_REGISTER'
+def _fetch_imported_assets_for_employee(employee_code):
+    """
+    Query TBST_ASSETS from the REMOTE cowmis DB.
+    Returns rows where ACUSTODIAN = emp_code OR USERID = emp_code.
+    Only EQSRLNO and EQPTDESCP are returned for the recommendation cards.
+    """
+    assets = []
 
-        # TODO: Replace each column value with the real column name from that table.
-        # Set to None if that column does not exist in this table.
-        'columns': {
-            'asset_number':       '<<<REPLACE: asset/inventory number column>>>',
-            'serial_number':      '<<<REPLACE: serial number column>>>',
-            'category':           '<<<REPLACE: asset category column>>>',
-            'make':               '<<<REPLACE: manufacturer/make column>>>',
-            'model':              '<<<REPLACE: model column>>>',
-            'configuration':      '<<<REPLACE: configuration/specs column>>>',  # or None
-            'network_domain':     '<<<REPLACE: network domain column>>>',        # or None
-            'ip_address':         '<<<REPLACE: IP address column>>>',            # or None
-            'monitor':            '<<<REPLACE: monitor column>>>',               # or None
-            'asset_custodian':    '<<<REPLACE: asset custodian ECNO column>>>',  # or None
-            'user_division':      '<<<REPLACE: division column>>>',              # or None
-            'group_name':         '<<<REPLACE: group column>>>',                 # or None
-            'area':               '<<<REPLACE: area column>>>',                  # or None
-            'location':           '<<<REPLACE: location column>>>',              # or None
-            'acms_fms':           '<<<REPLACE: ACMS/FMS type column>>>',         # or None
-            'warranty_expiry':    '<<<REPLACE: warranty/expiry date column>>>',  # or None
-            'remarks':            '<<<REPLACE: remarks column>>>',               # or None
-        }
-    },
+    remote_engine = db.engines.get('remote_pis')
+    if not remote_engine:
+        print("ERROR: remote_pis engine not configured — cannot fetch cowmis recommendations")
+        return assets
 
-    # ── Add more tables here if needed ──────────────────────────────────────
-    # {
-    #     'source': 'FMS',
-    #     'table': '<<<REPLACE: second table name>>>',
-    #     'columns': { ... same structure as above ... }
-    # },
-]
-# ===========================================================================
-# END OF COWMIS CONFIGURATION
-# ===========================================================================
+    query = text(f"""
+        SELECT
+            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_SERIAL_COL}]      AS NVARCHAR(255)))), '') AS serial_number,
+            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_DESCRIPTION_COL}] AS NVARCHAR(MAX)))),  '') AS configuration,
+            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_CUSTODIAN_COL}]   AS NVARCHAR(50)))),  '') AS asset_custodian_ecno
+        FROM [{COWMIS_ASSETS_TABLE}]
+        WHERE
+            UPPER(LTRIM(RTRIM(CAST([{COWMIS_CUSTODIAN_COL}] AS NVARCHAR(50))))) = :ec
+            OR
+            UPPER(LTRIM(RTRIM(CAST([{COWMIS_USERID_COL}]    AS NVARCHAR(50))))) = :ec
+    """)
+
+    try:
+        with remote_engine.connect() as conn:
+            rows = conn.execute(query, {'ec': employee_code}).mappings().all()
+
+        for i, row in enumerate(rows):
+            assets.append({
+                'id':                 f"TBST-{i+1}",
+                'sourceTable':        'TBST_ASSETS',
+                'serialNumber':       row.get('serial_number') or '',
+                'configuration':      row.get('configuration') or '',
+                'asset_custodian_ecno': row.get('asset_custodian_ecno') or '',
+                # All other fields left blank — user fills them manually
+                'name':               row.get('serial_number') or f"Asset {i+1}",
+                'CATEGORY':           None,
+                'make':               None,
+                'model':              None,
+                'networkDomain':      None,
+                'ipAddress':          None,
+                'Monitor':            None,
+                'AssetCustodianECNO': row.get('asset_custodian_ecno') or '',
+                'UserDivision':       None,
+                'GROUP':              None,
+                'AREA':               None,
+                'LOCATION':           None,
+                'acmsFms':            None,
+                'fmsExpiryDate':      None,
+            })
+        print(f"INFO: Fetched {len(assets)} recommendations from cowmis.{COWMIS_ASSETS_TABLE}")
+    except Exception as e:
+        print(f"ERROR: Failed to query cowmis.{COWMIS_ASSETS_TABLE}: {e}")
+
+    return assets
 
 
 def _clean_value(value):
@@ -139,103 +142,6 @@ def _is_placeholder(value):
     return value is None or '<<<' in str(value)
 
 
-def _fetch_imported_assets_for_employee(employee_code):
-    """
-    Query the configured remote cowmis table(s) for assets belonging to
-    the given employee. Uses COWMIS_RECOMMENDATION_TABLES config above.
-    Returns [] if cowmis is unreachable or config is not yet filled in.
-    """
-    assets = []
-
-    remote_engine = db.engines.get('remote_pis')
-    if not remote_engine:
-        print("ERROR: remote_pis engine not configured — cannot fetch cowmis assets")
-        return assets
-
-    # Abort early if the employee code filter column is still a placeholder
-    if _is_placeholder(COWMIS_EMPLOYEE_CODE_COLUMN):
-        print("INFO: COWMIS_EMPLOYEE_CODE_COLUMN not configured yet — skipping recommendations")
-        return assets
-
-    ecno_col = COWMIS_EMPLOYEE_CODE_COLUMN
-
-    for table_cfg in COWMIS_RECOMMENDATION_TABLES:
-        table_name = table_cfg.get('table', '')
-        source     = table_cfg.get('source', 'COWMIS')
-        cols       = table_cfg.get('columns', {})
-
-        # Skip this table if the table name placeholder hasn't been replaced
-        if _is_placeholder(table_name):
-            print(f"INFO: Table name for source '{source}' not configured yet — skipping")
-            continue
-
-        # Build SELECT column list — only include columns that are configured
-        def col_expr(col_val, alias):
-            if _is_placeholder(col_val) or col_val is None:
-                return f"CAST(NULL AS NVARCHAR(255)) AS {alias}"
-            return f"NULLIF(LTRIM(RTRIM(CAST([{col_val}] AS NVARCHAR(255)))), '') AS {alias}"
-
-        select_clause = f"""
-            {col_expr(cols.get('asset_number'),    'asset_number')},
-            {col_expr(cols.get('serial_number'),   'serial_number')},
-            {col_expr(cols.get('category'),        'category')},
-            {col_expr(cols.get('make'),            'make')},
-            {col_expr(cols.get('model'),           'model')},
-            NULLIF(LTRIM(RTRIM(CAST([{cols.get('configuration', '')}] AS NVARCHAR(MAX)))), '') AS configuration
-                {f", {col_expr(cols.get('network_domain'), 'network_domain')}" if not _is_placeholder(cols.get('network_domain')) else ", CAST(NULL AS NVARCHAR(255)) AS network_domain"},
-            {col_expr(cols.get('ip_address'),      'ip_address')},
-            {col_expr(cols.get('monitor'),         'monitor')},
-            {col_expr(cols.get('asset_custodian'), 'asset_custodian_ecno')},
-            {col_expr(cols.get('user_division'),   'user_division')},
-            {col_expr(cols.get('group_name'),      'group_name')},
-            {col_expr(cols.get('area'),            'area')},
-            {col_expr(cols.get('location'),        'location')},
-            {col_expr(cols.get('acms_fms'),        'acms_fms')},
-            {col_expr(cols.get('warranty_expiry'), 'warranty_expiry_date')},
-            {col_expr(cols.get('remarks'),         'remarks')}
-        """
-
-        # Simpler, reliable query builder
-        def safe_col(col_val, alias, cast='NVARCHAR(255)'):
-            if _is_placeholder(col_val) or not col_val:
-                return f"CAST(NULL AS {cast}) AS {alias}"
-            return f"NULLIF(LTRIM(RTRIM(CAST([{col_val}] AS {cast}))), '') AS {alias}"
-
-        query = text(f"""
-            SELECT
-                {safe_col(cols.get('asset_number'),    'asset_number')},
-                {safe_col(cols.get('serial_number'),   'serial_number')},
-                {safe_col(cols.get('category'),        'category')},
-                {safe_col(cols.get('make'),            'make')},
-                {safe_col(cols.get('model'),           'model')},
-                {safe_col(cols.get('configuration'),   'configuration', 'NVARCHAR(MAX)')},
-                {safe_col(cols.get('network_domain'),  'network_domain')},
-                {safe_col(cols.get('ip_address'),      'ip_address')},
-                {safe_col(cols.get('monitor'),         'monitor')},
-                {safe_col(cols.get('asset_custodian'), 'asset_custodian_ecno')},
-                {safe_col(cols.get('user_division'),   'user_division')},
-                {safe_col(cols.get('group_name'),      'group_name')},
-                {safe_col(cols.get('area'),            'area')},
-                {safe_col(cols.get('location'),        'location')},
-                {safe_col(cols.get('acms_fms'),        'acms_fms')},
-                {safe_col(cols.get('warranty_expiry'), 'warranty_expiry_date')},
-                {safe_col(cols.get('remarks'),         'remarks')}
-            FROM [{table_name}]
-            WHERE UPPER(LTRIM(RTRIM(CAST([{ecno_col}] AS NVARCHAR(50))))) = :employee_code
-        """)
-
-        try:
-            with remote_engine.connect() as conn:
-                rows = conn.execute(query, {'employee_code': employee_code}).mappings().all()
-            start_index = len(assets)
-            assets.extend([
-                _imported_asset_to_dict(row, source, start_index + index + 1)
-                for index, row in enumerate(rows)
-            ])
-            print(f"INFO: Fetched {len(rows)} recommendations from cowmis.{table_name}")
-        except Exception as e:
-            print(f"ERROR: Failed to query cowmis.{table_name}: {e}")
-            continue
 
     return assets
 

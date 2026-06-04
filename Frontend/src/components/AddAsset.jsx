@@ -7,60 +7,12 @@ import '../pages/Dashboard.css';
 // Helper: map a remote cowmis recommendation → form field values
 // ─────────────────────────────────────────────────────────────────────────────
 function recommendationToForm(rec) {
-  // Known dropdown options per field
-  const MAKE_OPTIONS = ['HP', 'Dell', 'Cisco', 'Sony', 'Toshiba', 'Konika', 'NetApp', 'HPE', 'NetASQ', 'D-link'];
-  const MODEL_OPTIONS = ['Power edge R 730', 'HP Compaq 8200 CM', 'HP ProDesk 600 G1'];
-  const DOMAIN_OPTIONS = ['Internet', 'SpaceNet', 'ASDMLAN', 'RSAA Data', 'Not in any Network'];
-  const DIVISION_OPTIONS = ['DPFD', 'ASAG', 'RSAA', 'ASCID'];
-  const GROUP_OPTIONS = ['SPFPG', 'ASAG', 'RSAA'];
-  const AREA_OPTIONS = ['DPA', 'RSA'];
-  const LOCATION_OPTIONS = ['Balanagar', 'ASAG', 'RSAA'];
-  const CATEGORY_OPTIONS = [
-    'SERVER TYPE 1', 'SERVER TYPE 2', 'PC TYPE 1', 'PC TYPE 2', 'PC TYPE 3', 'PC TYPE 4',
-    'STORAGE TYPE 2', 'PRINTER TYPE 1', 'PRINTER TYPE 2', 'SP TYPE 1', 'SP TYPE 2',
-  ];
-
-  const pick = (val, options) => {
-    if (!val) return { selected: '', other: '' };
-    const match = options.find(o => o.toUpperCase() === val.toUpperCase());
-    return match ? { selected: match, other: '' } : { selected: 'Others', other: val };
-  };
-
-  const make = pick(rec.make, MAKE_OPTIONS);
-  const model = pick(rec.model, MODEL_OPTIONS);
-  const domain = pick(rec.networkDomain, DOMAIN_OPTIONS);
-  const division = pick(rec.UserDivision, DIVISION_OPTIONS);
-  const group = pick(rec.GROUP, GROUP_OPTIONS);
-  const area = pick(rec.AREA, AREA_OPTIONS);
-  const location = pick(rec.LOCATION, LOCATION_OPTIONS);
-  const category = pick(rec.CATEGORY, CATEGORY_OPTIONS);
-
+  // Only pre-fill EQSRLNO → serialNumber and EQPTDESCP → configuration
+  // All other fields are left blank for the user to fill manually
   return {
-    name: rec.name || rec.assetNumber || '',
-    serialNumber: rec.serialNumber || '',
-    make: make.selected,
-    makeOther: make.other,
-    model: model.selected,
-    modelOther: model.other,
+    ...EMPTY_FORM,
+    serialNumber:  rec.serialNumber  || '',
     configuration: rec.configuration || '',
-    networkDomain: domain.selected,
-    networkDomainOther: domain.other,
-    ipAddress: rec.ipAddress || '',
-    acmsFms: rec.acmsFms || rec.sourceTable || '',
-    fmsExpiryDate: rec.fmsExpiryDate || rec.warrantyExpiryDate || '',
-    Monitor: '',
-    MonitorCustom: rec.Monitor || '',
-    AssetCustodianECNO: rec.AssetCustodianECNO || '',
-    UserDivision: division.selected,
-    UserDivisionOther: division.other,
-    GROUP: group.selected,
-    GROUPOther: group.other,
-    AREA: area.selected,
-    AREAOther: area.other,
-    CATEGORY: category.selected,
-    CATEGORYOther: category.other,
-    LOCATION: location.selected,
-    LOCATIONOther: location.other,
   };
 }
 
@@ -68,31 +20,29 @@ function recommendationToForm(rec) {
 // Recommendation Card component
 // ─────────────────────────────────────────────────────────────────────────────
 function RecommendationCard({ rec, isSelected, onClick }) {
-  const source = rec.sourceTable || rec.acmsFms || 'ACMS';
-  const badgeClass = source.toLowerCase().includes('fms') ? 'fms' : 'acms';
-
   return (
     <button
       type="button"
       className={`rec-card ${isSelected ? 'rec-card--selected' : ''}`}
       onClick={() => onClick(rec)}
-      title={`Click to auto-fill form with this ${source} asset`}
+      title="Click to pre-fill Serial Number and Configuration"
     >
       <div className="rec-card-header">
-        <span className={`acms-badge ${badgeClass}`}>{source}</span>
+        <span className="acms-badge acms">TBST_ASSETS</span>
         {isSelected && <CheckCircle2 size={16} className="rec-card-check" />}
       </div>
-      <div className="rec-card-name">{rec.name || rec.assetNumber || '—'}</div>
-      <div className="rec-card-meta">
-        {rec.CATEGORY && <span>{rec.CATEGORY}</span>}
-        {rec.make && <span>{rec.make}</span>}
-        {rec.model && <span>{rec.model}</span>}
+      <div className="rec-card-name">
+        {rec.serialNumber ? <><strong>S/N:</strong> {rec.serialNumber}</> : '— No Serial Number —'}
       </div>
-      {rec.serialNumber && (
-        <div className="rec-card-serial">S/N: {rec.serialNumber}</div>
+      {rec.configuration && (
+        <div className="rec-card-meta" style={{ marginTop: '0.4rem', fontSize: '0.82rem', opacity: 0.8 }}>
+          <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {rec.configuration.length > 120 ? rec.configuration.slice(0, 120) + '…' : rec.configuration}
+          </span>
+        </div>
       )}
       <div className="rec-card-cta">
-        Auto-fill form <ChevronRight size={14} />
+        Fill Serial No. &amp; Configuration <ChevronRight size={14} />
       </div>
     </button>
   );
@@ -210,8 +160,8 @@ export default function AddAsset({ onAddAsset }) {
         <div className="rec-panel-header">
           <div className="rec-panel-title">
             <Database size={18} className="rec-panel-db-icon" />
-            <span>Recommendations from cowmis</span>
-            <span className="rec-panel-subtitle">Remote Database</span>
+            <span>Recommendations from cowmis — TBST_ASSETS</span>
+            <span className="rec-panel-subtitle">EQSRLNO · EQPTDESCP</span>
           </div>
           <Sparkles size={16} style={{ color: 'var(--accent-primary)', opacity: 0.7 }} />
         </div>
@@ -273,7 +223,7 @@ export default function AddAsset({ onAddAsset }) {
         {selectedRecId && (
           <div className="rec-autofill-notice">
             <CheckCircle2 size={16} />
-            Form auto-filled from cowmis — review the values below and save.
+            Serial Number &amp; Configuration pre-filled from cowmis — please fill the remaining fields manually.
           </div>
         )}
 
