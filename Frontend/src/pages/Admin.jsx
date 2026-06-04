@@ -76,7 +76,7 @@ export default function Admin() {
             <Monitor size={20} /><span>All Assets</span>
           </button>
           <button className={`nav-item ${activeTab === 'my-assets' ? 'active' : ''}`} onClick={() => handleTabChange('my-assets')}>
-            <Laptop size={20} /><span>My Assets</span>
+            <Laptop size={20} /><span>My ACMS Systems List</span>
           </button>
         </nav>
 

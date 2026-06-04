@@ -133,7 +133,7 @@ export default function MyAssets({ assets, loading, error, employeeCode, onRefre
       {/* ── Header ── */}
       <div className="section-header">
         <div className="section-title-block">
-          <h2 className="section-title">My Assets</h2>
+          <h2 className="section-title">My ACMS Systems List</h2>
           {employeeCode && (
             <span className="section-ecno-tag">
               <UserCheck size={14} />

@@ -94,13 +94,13 @@ export default function User() {
             className={`nav-item ${activeTab === 'my-assets' ? 'active' : ''}`}
             onClick={() => handleTabChange('my-assets')}
           >
-            <LayoutDashboard size={20} /><span>My Assets</span>
+            <LayoutDashboard size={20} /><span>My ACMS Systems List</span>
           </button>
           <button
             className={`nav-item ${activeTab === 'add-asset' ? 'active' : ''}`}
             onClick={() => handleTabChange('add-asset')}
           >
-            <PlusCircle size={20} /><span>Add Asset</span>
+            <PlusCircle size={20} /><span>Add System to ACMS List</span>
           </button>
         </nav>
 

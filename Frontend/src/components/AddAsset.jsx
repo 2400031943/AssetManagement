@@ -148,7 +148,7 @@ export default function AddAsset({ onAddAsset }) {
       {/* ── Page header ────────────────────────────────────────────────────── */}
       <div className="section-header" style={{ marginBottom: '1.5rem' }}>
         <div>
-          <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>Add Asset</h2>
+          <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>Add System to ACMS List</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
             Select a recommendation from the <strong>cowmis</strong> database or fill in the form manually.
           </p>
@@ -160,7 +160,7 @@ export default function AddAsset({ onAddAsset }) {
         <div className="rec-panel-header">
           <div className="rec-panel-title">
             <Database size={18} className="rec-panel-db-icon" />
-            <span>Recommendations from cowmis — TBST_ASSETS</span>
+            <span>Recommendations from COINS</span>
             <span className="rec-panel-subtitle">EQSRLNO · EQPTDESCP</span>
           </div>
           <Sparkles size={16} style={{ color: 'var(--accent-primary)', opacity: 0.7 }} />
