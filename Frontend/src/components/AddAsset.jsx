@@ -184,17 +184,42 @@ export default function AddAsset({ onAddAsset }) {
               <option value="">— Select an asset from COINS —</option>
               {recommendations.map(rec => (
                 <option key={rec.id} value={rec.id}>
-                  {rec.serialNumber || '(No Serial)'}
-                  {rec.configuration ? ` — ${truncate(rec.configuration, 80)}` : ''}
+                  {rec.serialNumber || '(No Serial No.)'}
                 </option>
               ))}
             </select>
-            {selectedRecId && (
-              <div className="rec-autofill-notice" style={{ marginTop: '0.75rem' }}>
-                <CheckCircle2 size={15} />
-                Serial Number &amp; Configuration pre-filled — please fill the remaining fields manually.
-              </div>
-            )}
+
+            {/* Preview box — shows full EQSRLNO + EQPTDESCP when selected */}
+            {selectedRecId && (() => {
+              const sel = recommendations.find(r => r.id === selectedRecId);
+              return sel ? (
+                <div style={{
+                  marginTop: '0.75rem',
+                  background: 'var(--bg-secondary, rgba(255,255,255,0.05))',
+                  border: '1px solid var(--accent-primary, #6c63ff)',
+                  borderRadius: '8px',
+                  padding: '0.85rem 1rem',
+                  fontSize: '0.88rem',
+                }}>
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: sel.configuration ? '0.5rem' : 0 }}>
+                    <span>
+                      <strong style={{ color: 'var(--text-muted)' }}>EQSRLNO: </strong>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{sel.serialNumber || '—'}</span>
+                    </span>
+                  </div>
+                  {sel.configuration && (
+                    <div>
+                      <strong style={{ color: 'var(--text-muted)' }}>EQPTDESCP: </strong>
+                      <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{sel.configuration}</span>
+                    </div>
+                  )}
+                  <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-primary, #6c63ff)', fontSize: '0.82rem' }}>
+                    <CheckCircle2 size={14} />
+                    Serial Number &amp; Configuration pre-filled below — fill remaining fields manually.
+                  </div>
+                </div>
+              ) : null;
+            })()}
           </div>
         )}
       </div>
