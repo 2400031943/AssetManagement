@@ -4,11 +4,9 @@ import { getAssetRecommendations } from '../api';
 import '../pages/Dashboard.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: map a remote cowmis recommendation → form field values
+// Helper: map a COINS recommendation → form field values
 // ─────────────────────────────────────────────────────────────────────────────
 function recommendationToForm(rec) {
-  // Only pre-fill EQSRLNO → serialNumber and EQPTDESCP → configuration
-  // All other fields are left blank for the user to fill manually
   return {
     ...EMPTY_FORM,
     serialNumber:  rec.serialNumber  || '',
@@ -16,7 +14,69 @@ function recommendationToForm(rec) {
   };
 }
 
-// RecommendationCard removed — now using a dropdown select instead
+// ─────────────────────────────────────────────────────────────────────────────
+// Recommendation Card — shows ASSETNO, EQSRLNO, EQPTDESCP
+// ─────────────────────────────────────────────────────────────────────────────
+function RecommendationCard({ rec, isSelected, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(rec)}
+      style={{
+        width: '100%',
+        textAlign: 'left',
+        background: isSelected
+          ? 'linear-gradient(135deg, rgba(108,99,255,0.18), rgba(108,99,255,0.08))'
+          : 'rgba(255,255,255,0.03)',
+        border: isSelected
+          ? '2px solid var(--accent-primary, #6c63ff)'
+          : '1.5px solid rgba(255,255,255,0.1)',
+        borderRadius: '12px',
+        padding: '1rem 1.1rem',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        marginBottom: '0.75rem',
+      }}
+    >
+      {/* Header row: COINS badge + checkmark */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+        <span style={{
+          fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.05em',
+          background: 'var(--accent-primary, #6c63ff)', color: '#fff',
+          padding: '2px 8px', borderRadius: '20px',
+        }}>COINS</span>
+        {isSelected && <CheckCircle2 size={16} style={{ color: 'var(--accent-primary, #6c63ff)' }} />}
+      </div>
+
+      {/* ASSETNO */}
+      {rec.assetNumber && (
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+          <strong>Asset No: </strong>
+          <span style={{ fontFamily: 'monospace' }}>{rec.assetNumber}</span>
+        </div>
+      )}
+
+      {/* EQSRLNO */}
+      <div style={{ fontSize: '0.92rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+        <strong style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Serial No: </strong>
+        <span style={{ fontFamily: 'monospace' }}>{rec.serialNumber || '—'}</span>
+      </div>
+
+      {/* EQPTDESCP */}
+      {rec.configuration && (
+        <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary, #a0aec0)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <strong style={{ color: 'var(--text-muted)' }}>Description: </strong>
+          {rec.configuration}
+        </div>
+      )}
+
+      {/* CTA */}
+      <div style={{ marginTop: '0.65rem', fontSize: '0.8rem', color: 'var(--accent-primary, #6c63ff)', fontWeight: 600 }}>
+        {isSelected ? '✓ Selected — Serial No. & Configuration pre-filled' : 'Click to pre-fill Serial No. & Configuration →'}
+      </div>
+    </button>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main AddAsset component
@@ -40,11 +100,7 @@ const EMPTY_FORM = {
   LOCATION: '', LOCATIONOther: '',
 };
 
-// Truncate long text for dropdown labels
-function truncate(str, n) {
-  if (!str) return '';
-  return str.length > n ? str.slice(0, n) + '…' : str;
-}
+
 
 export default function AddAsset({ onAddAsset }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -105,6 +161,17 @@ export default function AddAsset({ onAddAsset }) {
     }
   };
 
+  // ── Card click handler ────────────────────────────────────────────────────
+  const handleCardClick = (rec) => {
+    if (selectedRecId === rec.id) {
+      setSelectedRecId(null);
+      setFormData(prev => ({ ...prev, serialNumber: '', configuration: '' }));
+    } else {
+      setSelectedRecId(rec.id);
+      setFormData(recommendationToForm(rec));
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="add-asset-container animate-fade-in">
@@ -119,13 +186,13 @@ export default function AddAsset({ onAddAsset }) {
         </div>
       </div>
 
-      {/* ── Recommendations Dropdown Panel ─────────────────────────────────── */}
+      {/* ── Recommendations Cards Panel ─────────────────────────────────────── */}
       <div className="rec-panel glass-panel" style={{ marginBottom: '2rem' }}>
         <div className="rec-panel-header">
           <div className="rec-panel-title">
             <Database size={18} className="rec-panel-db-icon" />
             <span>Recommendations from COINS</span>
-            <span className="rec-panel-subtitle">EQSRLNO · EQPTDESCP</span>
+            <span className="rec-panel-subtitle">ASSETNO · EQSRLNO · EQPTDESCP</span>
           </div>
           <Sparkles size={16} style={{ color: 'var(--accent-primary)', opacity: 0.7 }} />
         </div>
@@ -138,7 +205,7 @@ export default function AddAsset({ onAddAsset }) {
           </div>
         )}
 
-        {/* Error — remote DB unreachable */}
+        {/* Error */}
         {!recLoading && recError && (
           <div className="rec-error">
             <ServerCrash size={18} />
@@ -153,73 +220,20 @@ export default function AddAsset({ onAddAsset }) {
           </div>
         )}
 
-        {/* ── Dropdown ── */}
+        {/* Cards */}
         {!recLoading && !recError && recommendations.length > 0 && (
           <div style={{ padding: '0 1rem 1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-              Select an asset from COINS to pre-fill Serial Number &amp; Configuration:
-            </label>
-            <select
-              className="login-input"
-              style={{ width: '100%' }}
-              value={selectedRecId || ''}
-              onChange={e => {
-                const id = e.target.value;
-                if (!id) {
-                  setSelectedRecId(null);
-                  setFormData(prev => ({ ...prev, serialNumber: '', configuration: '' }));
-                } else {
-                  const rec = recommendations.find(r => r.id === id);
-                  if (rec) {
-                    setSelectedRecId(id);
-                    setFormData(prev => ({
-                      ...prev,
-                      serialNumber:  rec.serialNumber  || '',
-                      configuration: rec.configuration || '',
-                    }));
-                  }
-                }
-              }}
-            >
-              <option value="">— Select an asset from COINS —</option>
-              {recommendations.map(rec => (
-                <option key={rec.id} value={rec.id}>
-                  {rec.serialNumber || '(No Serial No.)'}
-                </option>
-              ))}
-            </select>
-
-            {/* Preview box — shows full EQSRLNO + EQPTDESCP when selected */}
-            {selectedRecId && (() => {
-              const sel = recommendations.find(r => r.id === selectedRecId);
-              return sel ? (
-                <div style={{
-                  marginTop: '0.75rem',
-                  background: 'var(--bg-secondary, rgba(255,255,255,0.05))',
-                  border: '1px solid var(--accent-primary, #6c63ff)',
-                  borderRadius: '8px',
-                  padding: '0.85rem 1rem',
-                  fontSize: '0.88rem',
-                }}>
-                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: sel.configuration ? '0.5rem' : 0 }}>
-                    <span>
-                      <strong style={{ color: 'var(--text-muted)' }}>EQSRLNO: </strong>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{sel.serialNumber || '—'}</span>
-                    </span>
-                  </div>
-                  {sel.configuration && (
-                    <div>
-                      <strong style={{ color: 'var(--text-muted)' }}>EQPTDESCP: </strong>
-                      <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{sel.configuration}</span>
-                    </div>
-                  )}
-                  <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-primary, #6c63ff)', fontSize: '0.82rem' }}>
-                    <CheckCircle2 size={14} />
-                    Serial Number &amp; Configuration pre-filled below — fill remaining fields manually.
-                  </div>
-                </div>
-              ) : null;
-            })()}
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+              Click a card to pre-fill Serial Number &amp; Configuration. Click again to deselect.
+            </p>
+            {recommendations.map(rec => (
+              <RecommendationCard
+                key={rec.id}
+                rec={rec}
+                isSelected={selectedRecId === rec.id}
+                onClick={handleCardClick}
+              />
+            ))}
           </div>
         )}
       </div>

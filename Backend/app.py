@@ -16,13 +16,14 @@ from auth import auth_bp
 # ===========================================================================
 # Recommendations are fetched from TBST_ASSETS in cowmis where:
 #   ACUSTODIAN = emp_code  OR  USERID = emp_code
-# Only EQSRLNO and EQPTDESCP are shown on the recommendation card.
+# Columns shown on card: ASSETNO, EQSRLNO, EQPTDESCP
 # Clicking a card pre-fills:
 #   EQSRLNO    → System Serial Number field
 #   EQPTDESCP  → Brief Configuration field
 # ===========================================================================
 
 COWMIS_ASSETS_TABLE      = 'TBST_ASSETS'
+COWMIS_ASSETNO_COL       = 'ASSETNO'
 COWMIS_SERIAL_COL        = 'EQSRLNO'
 COWMIS_DESCRIPTION_COL   = 'EQPTDESCP'
 COWMIS_CUSTODIAN_COL     = 'ACUSTODIAN'   # primary employee code column
@@ -33,7 +34,7 @@ def _fetch_imported_assets_for_employee(employee_code):
     """
     Query TBST_ASSETS from the REMOTE cowmis DB.
     Returns rows where ACUSTODIAN = emp_code OR USERID = emp_code.
-    Only EQSRLNO and EQPTDESCP are returned for the recommendation cards.
+    Returns ASSETNO, EQSRLNO and EQPTDESCP for the recommendation cards.
     """
     assets = []
 
@@ -44,9 +45,10 @@ def _fetch_imported_assets_for_employee(employee_code):
 
     query = text(f"""
         SELECT
-            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_SERIAL_COL}]      AS NVARCHAR(255)))), '') AS serial_number,
-            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_DESCRIPTION_COL}] AS NVARCHAR(MAX)))),  '') AS configuration,
-            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_CUSTODIAN_COL}]   AS NVARCHAR(50)))),  '') AS asset_custodian_ecno
+            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_ASSETNO_COL}]       AS NVARCHAR(255)))), '') AS asset_number,
+            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_SERIAL_COL}]         AS NVARCHAR(255)))), '') AS serial_number,
+            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_DESCRIPTION_COL}]    AS NVARCHAR(MAX)))),  '') AS configuration,
+            NULLIF(LTRIM(RTRIM(CAST([{COWMIS_CUSTODIAN_COL}]      AS NVARCHAR(50)))),  '') AS asset_custodian_ecno
         FROM [{COWMIS_ASSETS_TABLE}]
         WHERE
             UPPER(LTRIM(RTRIM(CAST([{COWMIS_CUSTODIAN_COL}] AS NVARCHAR(50))))) = :ec
@@ -60,26 +62,14 @@ def _fetch_imported_assets_for_employee(employee_code):
 
         for i, row in enumerate(rows):
             assets.append({
-                'id':                 f"TBST-{i+1}",
-                'sourceTable':        'TBST_ASSETS',
-                'serialNumber':       row.get('serial_number') or '',
-                'configuration':      row.get('configuration') or '',
+                'id':                   f"TBST-{i+1}",
+                'sourceTable':          'TBST_ASSETS',
+                'assetNumber':          row.get('asset_number') or '',
+                'serialNumber':         row.get('serial_number') or '',
+                'configuration':        row.get('configuration') or '',
                 'asset_custodian_ecno': row.get('asset_custodian_ecno') or '',
-                # All other fields left blank — user fills them manually
-                'name':               row.get('serial_number') or f"Asset {i+1}",
-                'CATEGORY':           None,
-                'make':               None,
-                'model':              None,
-                'networkDomain':      None,
-                'ipAddress':          None,
-                'Monitor':            None,
-                'AssetCustodianECNO': row.get('asset_custodian_ecno') or '',
-                'UserDivision':       None,
-                'GROUP':              None,
-                'AREA':               None,
-                'LOCATION':           None,
-                'acmsFms':            None,
-                'fmsExpiryDate':      None,
+                'name':                 row.get('asset_number') or row.get('serial_number') or f"Asset {i+1}",
+                'AssetCustodianECNO':   row.get('asset_custodian_ecno') or '',
             })
         print(f"INFO: Fetched {len(assets)} recommendations from cowmis.{COWMIS_ASSETS_TABLE}")
     except Exception as e:
