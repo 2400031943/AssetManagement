@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2 } from 'lucide-react';
-import { getAssetRecommendations } from '../api';
+import React, { useState, useEffect, useRef } from 'react';
+import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X } from 'lucide-react';
+import { getAssetRecommendations, searchAssetRecommendations } from '../api';
 import '../pages/Dashboard.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -100,31 +100,57 @@ const EMPTY_FORM = {
   LOCATION: '', LOCATIONOther: '',
 };
 
-
-
 export default function AddAsset({ onAddAsset }) {
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [status, setStatus] = useState({ type: null, message: '' });
+  const [formData, setFormData]           = useState(EMPTY_FORM);
+  const [status, setStatus]               = useState({ type: null, message: '' });
 
-  // ── Recommendations state ──────────────────────────────────────────────────
-  const [recommendations, setRecommendations] = useState([]);
-  const [recLoading, setRecLoading] = useState(true);
-  const [recError, setRecError] = useState(false);
+  // ── My recommendations (emp_code filtered) ───────────────────────────
+  const [myRecs, setMyRecs]               = useState([]);
+  const [recLoading, setRecLoading]       = useState(true);
+  const [recError, setRecError]           = useState(false);
+
+  // ── Search state ───────────────────────────────────────────────
+  const [searchQ, setSearchQ]             = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching]         = useState(false);
+  const searchTimer                       = useRef(null);
+
+  // Derived: what cards to show
+  const recommendations = searchQ.trim() ? searchResults : myRecs;
+
   const [selectedRecId, setSelectedRecId] = useState(null);
 
-  // Fetch recommendations from remote cowmis DB on mount
+  // Fetch MY recommendations on mount
   useEffect(() => {
     setRecLoading(true);
     setRecError(false);
     getAssetRecommendations()
-      .then(data => {
-        setRecommendations(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        setRecError(true);
-      })
+      .then(data => setMyRecs(Array.isArray(data) ? data : []))
+      .catch(() => setRecError(true))
       .finally(() => setRecLoading(false));
   }, []);
+
+  // Debounced search — fires 400ms after user stops typing
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (!searchQ.trim()) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const data = await searchAssetRecommendations(searchQ.trim());
+        setSearchResults(Array.isArray(data) ? data : []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(searchTimer.current);
+  }, [searchQ]);
 
   // ── Form handlers ──────────────────────────────────────────────────────────
   const handleChange = (e) => {
@@ -213,20 +239,69 @@ export default function AddAsset({ onAddAsset }) {
           </div>
         )}
 
-        {/* Empty */}
-        {!recLoading && !recError && recommendations.length === 0 && (
+        {/* Empty — no MY assets found, but search still available */}
+        {!recLoading && !recError && myRecs.length === 0 && !searchQ.trim() && (
           <div className="rec-empty">
-            No assets found for your employee code in COINS. Please fill in the form below manually.
+            No assets found for your employee code in COINS.
+            Use the search bar below to find an asset by serial number.
           </div>
         )}
 
-        {/* Cards */}
-        {!recLoading && !recError && recommendations.length > 0 && (
+        {/* Search bar + Cards — always visible once loaded */}
+        {!recLoading && !recError && (
           <div style={{ padding: '0 1rem 1rem' }}>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              Click a card to pre-fill Serial Number &amp; Configuration. Click again to deselect.
+
+            {/* ── Search bar ── */}
+            <div style={{ position: 'relative', marginBottom: '1rem' }}>
+              <Search size={15} style={{
+                position: 'absolute', left: '0.75rem', top: '50%',
+                transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none',
+              }} />
+              <input
+                type="text"
+                value={searchQ}
+                onChange={e => { setSearchQ(e.target.value); setSelectedRecId(null); }}
+                placeholder="Search by Serial Number (EQSRLNO)…"
+                className="login-input"
+                style={{ paddingLeft: '2.2rem', paddingRight: '2.2rem', width: '100%' }}
+              />
+              {searchQ && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQ(''); setSearchResults([]); setSelectedRecId(null); }}
+                  style={{
+                    position: 'absolute', right: '0.75rem', top: '50%',
+                    transform: 'translateY(-50%)', background: 'none',
+                    border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0,
+                  }}
+                ><X size={15} /></button>
+              )}
+            </div>
+
+            {/* Label */}
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+              {searchQ.trim()
+                ? searching
+                  ? 'Searching COINS…'
+                  : `${recommendations.length} result(s) for "${searchQ}"`
+                : 'Your assets from COINS — click a card to pre-fill the form.'}
             </p>
-            {recommendations.map(rec => (
+
+            {/* Searching spinner */}
+            {searching && (
+              <div className="rec-loading" style={{ padding: '0.5rem 0' }}>
+                <Loader2 size={16} className="rec-spinner" />
+                <span>Searching COINS…</span>
+              </div>
+            )}
+
+            {/* No search results */}
+            {!searching && searchQ.trim() && recommendations.length === 0 && (
+              <div className="rec-empty">No assets found matching "{searchQ}" in COINS.</div>
+            )}
+
+            {/* Cards */}
+            {!searching && recommendations.map(rec => (
               <RecommendationCard
                 key={rec.id}
                 rec={rec}

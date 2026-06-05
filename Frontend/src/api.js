@@ -177,6 +177,23 @@ export async function getAssetRecommendations() {
   return apiFetch('/assets/recommendations');
 }
 
+/**
+ * Search TBST_ASSETS in cowmis by EQSRLNO (partial match).
+ * Used by the search bar in the recommendations panel.
+ */
+export async function searchAssetRecommendations(q) {
+  if (!q || !q.trim()) return [];
+  if (USE_MOCK) {
+    await delay(300);
+    return MOCK_ASSETS
+      .filter(a => (a.serialNumber || '').toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 10)
+      .map((a, i) => ({ ...a, id: `search-${i + 1}`, sourceTable: 'TBST_ASSETS' }));
+  }
+  return apiFetch(`/assets/recommendations/search?q=${encodeURIComponent(q.trim())}`);
+}
+
+
 export async function getAllAssets() {
   if (USE_MOCK) {
     await delay();

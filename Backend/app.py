@@ -590,11 +590,60 @@ def create_app(config_class=Config):
 
         return jsonify(remote_assets), 200
 
+    @app.route('/api/assets/recommendations/search', methods=['GET'])
+    @jwt_required()
+    def search_recommendations():
+        """
+        Search TBST_ASSETS in cowmis by EQSRLNO.
+        GET /api/assets/recommendations/search?q=SRL123
+        Returns cards with ASSETNO, EQSRLNO, EQPTDESCP.
+        """
+        q = request.args.get('q', '').strip()
+        if not q:
+            return jsonify([]), 200
+
+        remote_engine = db.engines.get('remote_pis')
+        if not remote_engine:
+            return jsonify({'error': 'remote_pis not configured'}), 500
+
+        try:
+            query = text(f"""
+                SELECT TOP 20
+                    NULLIF(LTRIM(RTRIM(CAST([{COWMIS_ASSETNO_COL}]     AS NVARCHAR(255)))), '') AS asset_number,
+                    NULLIF(LTRIM(RTRIM(CAST([{COWMIS_SERIAL_COL}]       AS NVARCHAR(255)))), '') AS serial_number,
+                    NULLIF(LTRIM(RTRIM(CAST([{COWMIS_DESCRIPTION_COL}]  AS NVARCHAR(MAX)))),  '') AS configuration,
+                    NULLIF(LTRIM(RTRIM(CAST([{COWMIS_CUSTODIAN_COL}]    AS NVARCHAR(50)))),  '') AS asset_custodian_ecno
+                FROM [{COWMIS_ASSETS_TABLE}]
+                WHERE [{COWMIS_SERIAL_COL}] LIKE :q
+                ORDER BY [{COWMIS_SERIAL_COL}]
+            """)
+            with remote_engine.connect() as conn:
+                rows = conn.execute(query, {'q': f'%{q}%'}).mappings().all()
+
+            results = [
+                {
+                    'id':                   f"SEARCH-{i+1}",
+                    'sourceTable':          'TBST_ASSETS',
+                    'assetNumber':          row.get('asset_number')  or '',
+                    'serialNumber':         row.get('serial_number') or '',
+                    'configuration':        row.get('configuration') or '',
+                    'AssetCustodianECNO':   row.get('asset_custodian_ecno') or '',
+                    'name':                 row.get('asset_number') or row.get('serial_number') or f'Result {i+1}',
+                }
+                for i, row in enumerate(rows)
+            ]
+            return jsonify(results), 200
+
+        except Exception as e:
+            print(f"ERROR: TBST_ASSETS search failed: {e}")
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/assets', methods=['POST'])
     @jwt_required()
     def create_asset():
         """Create a new asset in the local Asset_Manager DB."""
         data = request.get_json()
+
 
         # Parse optional FMS expiry date
         fms_expiry = None
