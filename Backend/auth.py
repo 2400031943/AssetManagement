@@ -8,6 +8,7 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 EMPLOYEE_PROFILE_VIEW        = 'VIEWEMPINFO'
 EMPLOYEE_CODE_COLUMN        = 'EMPLOYEECODE'
 EMPLOYEE_NAME_COLUMN        = 'EMPLOYEENAME'
+EMPLOYEE_DESIG_COLUMN       = 'DESGFULLNAME'
 
 
 def _quote_identifier(identifier):
@@ -61,7 +62,8 @@ def fetch_employee_profile(emp_code):
         query = text(f"""
             SELECT TOP 1
                 NULLIF(LTRIM(RTRIM(CAST([{EMPLOYEE_CODE_COLUMN}] AS NVARCHAR(50)))),  '') AS employee_code,
-                NULLIF(LTRIM(RTRIM(CAST([{EMPLOYEE_NAME_COLUMN}] AS NVARCHAR(255)))), '') AS employee_name
+                NULLIF(LTRIM(RTRIM(CAST([{EMPLOYEE_NAME_COLUMN}] AS NVARCHAR(255)))), '') AS employee_name,
+                NULLIF(LTRIM(RTRIM(CAST([{EMPLOYEE_DESIG_COLUMN}] AS NVARCHAR(255)))), '') AS designation
             FROM [{EMPLOYEE_PROFILE_VIEW}]
             WHERE UPPER(LTRIM(RTRIM(CAST([{EMPLOYEE_CODE_COLUMN}] AS NVARCHAR(50))))) = :ec
         """)
@@ -74,10 +76,12 @@ def fetch_employee_profile(emp_code):
             return {}
 
         return {
-            'employeeCode': row.get('employee_code') or emp_code,
-            'employeeName': row.get('employee_name') or emp_code,
-            'EMPLOYEECODE': row.get('employee_code') or emp_code,
-            'EMPLOYEENAME': row.get('employee_name') or emp_code,
+            'employeeCode':        row.get('employee_code')  or emp_code,
+            'employeeName':        row.get('employee_name')  or emp_code,
+            'employeeDesignation': row.get('designation')    or '',
+            'EMPLOYEECODE':        row.get('employee_code')  or emp_code,
+            'EMPLOYEENAME':        row.get('employee_name')  or emp_code,
+            'DESGFULLNAME':        row.get('designation')    or '',
         }
     except Exception as e:
         print(f"ERROR: fetch_employee_profile failed: {e}")

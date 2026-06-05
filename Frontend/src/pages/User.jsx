@@ -11,8 +11,9 @@ export default function User() {
   const navigate = useNavigate();
   const { user: loggedInUser, token } = getStoredSession();
   const employeeCode = loggedInUser.emp_code || loggedInUser.empCode || '';
-  const footerName = loggedInUser.employeeName || loggedInUser.EMPLOYEENAME || loggedInUser.name || loggedInUser.username || employeeCode;
-  const footerCode = loggedInUser.employeeCode || loggedInUser.EMPLOYEECODE || loggedInUser.emp_code || employeeCode;
+  const footerName        = loggedInUser.employeeName        || loggedInUser.EMPLOYEENAME  || loggedInUser.name     || loggedInUser.username || employeeCode;
+  const footerCode        = loggedInUser.employeeCode        || loggedInUser.EMPLOYEECODE  || loggedInUser.emp_code || employeeCode;
+  const footerDesignation = loggedInUser.employeeDesignation || loggedInUser.DESGFULLNAME  || '';
   const [activeTab, setActiveTab] = useState('my-assets');
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +119,9 @@ export default function User() {
             <div className="user-profile-info">
               <span className="user-profile-name">{footerName}</span>
               <span className="user-profile-role" style={{ fontSize: '0.78rem', opacity: 0.7 }}>{footerCode}</span>
+              {footerDesignation && (
+                <span style={{ fontSize: '0.72rem', opacity: 0.55, marginTop: '1px' }}>{footerDesignation}</span>
+              )}
             </div>
           </div>
           <button onClick={handleLogout} className="logout-btn full-width" style={{ marginTop: '0.5rem' }}>
