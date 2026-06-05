@@ -65,7 +65,7 @@ function RecommendationCard({ rec, isSelected, onClick }) {
       {/* EQPTDESCP */}
       {rec.configuration && (
         <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary, #a0aec0)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          <strong style={{ color: 'var(--text-muted)' }}>Description: </strong>
+          <strong style={{ color: 'var(--text-muted)' }}>EQPTDESCP: </strong>
           {rec.configuration}
         </div>
       )}
