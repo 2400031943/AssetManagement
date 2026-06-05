@@ -100,9 +100,10 @@ const EMPTY_FORM = {
   LOCATION: '', LOCATIONOther: '',
 };
 
-export default function AddAsset({ onAddAsset }) {
+export default function AddAsset({ onAddAsset, onSuccess }) {
   const [formData, setFormData]           = useState(EMPTY_FORM);
   const [status, setStatus]               = useState({ type: null, message: '' });
+  const [saved, setSaved]                 = useState(false);  // controls success overlay
 
   // ── My recommendations (emp_code filtered) ───────────────────────────
   const [myRecs, setMyRecs]               = useState([]);
@@ -178,10 +179,15 @@ export default function AddAsset({ onAddAsset }) {
 
     try {
       await onAddAsset(payload);
-      setStatus({ type: 'success', message: 'Asset saved to ACMS Systems Management successfully!' });
       setFormData(EMPTY_FORM);
       setSelectedRecId(null);
-      setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+      setSearchQ('');
+      setSearchResults([]);
+      setSaved(true);   // show success overlay
+      setTimeout(() => {
+        setSaved(false);
+        if (onSuccess) onSuccess();  // switch to My ACMS Systems List
+      }, 2500);
     } catch (err) {
       setStatus({ type: 'error', message: err.message || 'Failed to save asset. Please try again.' });
     }
@@ -201,6 +207,50 @@ export default function AddAsset({ onAddAsset }) {
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="add-asset-container animate-fade-in">
+
+      {/* ── SUCCESS OVERLAY ───────────────────────────────────────────────── */}
+      {saved && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(10, 10, 30, 0.82)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'fadeIn 0.3s ease',
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #0f2027, #1a3a2a)',
+            border: '2px solid #22c55e',
+            borderRadius: '20px',
+            padding: '3rem 4rem',
+            textAlign: 'center',
+            boxShadow: '0 0 60px rgba(34,197,94,0.3)',
+            maxWidth: '420px',
+            width: '90%',
+          }}>
+            {/* Animated checkmark */}
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%',
+              background: 'rgba(34,197,94,0.15)',
+              border: '3px solid #22c55e',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              animation: 'pulse 1.5s ease infinite',
+            }}>
+              <CheckCircle2 size={40} style={{ color: '#22c55e' }} />
+            </div>
+
+            <h2 style={{ color: '#22c55e', fontSize: '1.6rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+              Asset Saved Successfully!
+            </h2>
+            <p style={{ color: '#a0aec0', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
+              The asset has been added to <strong style={{ color: '#fff' }}>ACMS Systems Management</strong>.
+            </p>
+            <p style={{ color: '#718096', fontSize: '0.82rem' }}>
+              Redirecting to My ACMS Systems List…
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Page header ────────────────────────────────────────────────────── */}
       <div className="section-header" style={{ marginBottom: '1.5rem' }}>

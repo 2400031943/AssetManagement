@@ -67,20 +67,22 @@ export default function User() {
 
   const handleAddAsset = async (newAsset) => {
     try {
-      // Inject the logged-in user's local DB id so the asset is linked correctly
       const payload = {
         ...newAsset,
         assigned_to: loggedInUser.id || null,
-        // Ensure AssetCustodianECNO is set from logged-in user if not already provided
         AssetCustodianECNO: newAsset.AssetCustodianECNO || employeeCode,
       };
       const saved = await createAsset(payload);
       setAssets(prev => [...prev, saved]);
-      setActiveTab('my-assets');
+      // Tab switch is handled by AddAsset after showing success message
+      return { success: true };
     } catch (err) {
       console.error('Failed to save asset:', err);
+      throw err;
     }
   };
+
+  const switchToMyAssets = () => setActiveTab('my-assets');
 
   return (
     <div className="dashboard-layout">
@@ -140,7 +142,7 @@ export default function User() {
             onRefresh={fetchMyAssets}
           />
         )}
-        {activeTab === 'add-asset' && <AddAsset onAddAsset={handleAddAsset} />}
+        {activeTab === 'add-asset' && <AddAsset onAddAsset={handleAddAsset} onSuccess={switchToMyAssets} />}
       </main>
     </div>
   );
