@@ -655,7 +655,7 @@ def create_app(config_class=Config):
 
         # Use `or None` so empty strings are stored as NULL (consistent with existing DB rows)
         asset = Asset(
-            name                 = data.get('name') or None,
+            asset_number         = data.get('assetNumber') or None,
             serial_number        = data.get('serialNumber') or None,
             category             = data.get('CATEGORY') or None,
             make                 = data.get('make') or None,

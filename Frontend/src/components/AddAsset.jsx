@@ -82,7 +82,7 @@ function RecommendationCard({ rec, isSelected, onClick }) {
 // Main AddAsset component
 // ─────────────────────────────────────────────────────────────────────────────
 const EMPTY_FORM = {
-  name: '',
+  assetNumber: '',
   serialNumber: '',
   make: '', makeOther: '',
   model: '', modelOther: '',
@@ -463,10 +463,10 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
             </div>
           )}
 
-          {/* Asset Name */}
+          {/* Asset Number */}
           <div className="form-group">
-            <label>Asset Name *</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} required className="login-input" placeholder="Enter Asset Name" />
+            <label>Asset Number *</label>
+            <input type="text" name="assetNumber" value={formData.assetNumber} onChange={handleChange} required className="login-input" placeholder="Enter Asset Number" />
           </div>
 
           {/* Serial Number */}

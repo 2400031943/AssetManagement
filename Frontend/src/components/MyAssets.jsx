@@ -10,7 +10,7 @@ const ALL_COLUMNS = [
   { key: 'acmsCode',     label: 'ACMS Code' },
   { key: 'assetNumber',  label: 'Asset Number_(Refer PIS Database)' },
   { key: 'category',     label: 'Category' },
-  { key: 'name',         label: 'Asset Name' },
+  { key: 'assetNumber',   label: 'Asset Number' },
   { key: 'serialNumber', label: 'System Serial Number' },
   { key: 'make',         label: 'Make' },
   { key: 'model',        label: 'Model' },
@@ -97,7 +97,7 @@ export default function MyAssets({ assets, loading, error, employeeCode, onRefre
 
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
-      (asset.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (asset.assetNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (asset.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (getAssetValue(asset, 'currentUserEcno') || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter

@@ -5,7 +5,7 @@ import AssetDetailModal from './AssetDetailModal';
 import '../pages/Dashboard.css';
 
 const ALL_COLUMNS = [
-  { key: 'name',         label: 'Asset Name' },
+  { key: 'assetNumber',  label: 'Asset Number' },
   { key: 'serialNumber', label: 'Serial Number' },
   { key: 'make',         label: 'Make' },
   { key: 'model',        label: 'Model' },
@@ -43,7 +43,7 @@ export default function AdminAssets({ assets, loading, selectedUser, onClearUser
   const filteredAssets = assets.filter((asset) => {
     if (selectedUser && asset.assigned_to !== selectedUser.id) return false;
     const matchesSearch =
-      (asset.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (asset.assetNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (asset.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter
       ? (asset.CATEGORY === categoryFilter || asset.category === categoryFilter)
@@ -67,7 +67,7 @@ export default function AdminAssets({ assets, loading, selectedUser, onClearUser
       : 'all_assets.xlsx';
     const exportData = filteredAssets.map(asset => ({
       'Category':        asset.category || asset.CATEGORY || '',
-      'Asset Name':      asset.name,
+      'Asset Number':    asset.assetNumber,
       'Serial Number':   asset.serialNumber,
       'Make':            asset.make,
       'Model':           asset.model,
@@ -222,7 +222,7 @@ export default function AdminAssets({ assets, loading, selectedUser, onClearUser
                     <thead>
                       <tr>
                         <th>#</th>
-                        {visibleCols.name         && <th>Asset Name</th>}
+                        {visibleCols.assetNumber  && <th>Asset Number</th>}
                         {visibleCols.serialNumber  && <th>Serial Number</th>}
                         {visibleCols.make          && <th>Make</th>}
                         {visibleCols.model         && <th>Model</th>}
@@ -241,7 +241,7 @@ export default function AdminAssets({ assets, loading, selectedUser, onClearUser
                           title="Click to view full details"
                         >
                           <td className="row-index">{idx + 1}</td>
-                          {visibleCols.name         && <td className="asset-name-cell">{asset.name}</td>}
+                          {visibleCols.assetNumber  && <td className="asset-name-cell">{asset.assetNumber}</td>}
                           {visibleCols.serialNumber  && <td>{asset.serialNumber}</td>}
                           {visibleCols.make          && <td>{asset.make}</td>}
                           {visibleCols.model         && <td>{asset.model}</td>}

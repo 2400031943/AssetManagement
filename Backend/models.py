@@ -44,7 +44,7 @@ class Asset(db.Model):
     id                   = db.Column(db.Integer, primary_key=True)
 
     # Core identification
-    name                 = db.Column(db.String(100), nullable=True)   # NULL allowed for legacy rows
+    asset_number         = db.Column(db.String(100), nullable=True)   # NULL allowed for legacy rows
     serial_number        = db.Column(db.String(100), nullable=True)
 
     # Classification
@@ -80,7 +80,7 @@ class Asset(db.Model):
     def to_dict(self):
         return {
             'id':                 self.id,
-            'name':               self.name,
+            'assetNumber':        self.asset_number,
             'serialNumber':       self.serial_number,
             'CATEGORY':           self.category,
             'make':               self.make,

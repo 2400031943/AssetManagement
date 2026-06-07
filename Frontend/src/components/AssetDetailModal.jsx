@@ -48,7 +48,7 @@ export default function AssetDetailModal({ asset, onClose }) {
               {isServer ? <Server size={22} /> : <Monitor size={22} />}
             </div>
             <div>
-              <h2 className="modal-title">{asset.name}</h2>
+              <h2 className="modal-title">{asset.assetNumber || asset.serialNumber || 'Asset Details'}</h2>
               <span className="asset-category-badge" style={{ marginTop: '0.25rem', display: 'inline-block' }}>
                 {category}
               </span>
@@ -68,7 +68,7 @@ export default function AssetDetailModal({ asset, onClose }) {
             <DetailRow label="SL No"            value={asset.slNo} />
             <DetailRow label="ACMS Code"        value={asset.acmsCode} />
             <DetailRow label="Asset Number_(Refer PIS Database)" value={asset.assetNumber} />
-            <DetailRow label="Asset Name"       value={asset.name} />
+            <DetailRow label="Asset Number"     value={asset.assetNumber} />
             <DetailRow label="Category"         value={category} />
             <DetailRow label="System Serial Number" value={asset.serialNumber} />
             <DetailRow label="Make"             value={asset.make} />
