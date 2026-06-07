@@ -270,6 +270,7 @@ def create_app(config_class=Config):
         """
         user_id = request.args.get('user_id', type=int)
         area    = request.args.get('area')
+        
 
         query = Asset.query
         if user_id:
@@ -645,11 +646,12 @@ def create_app(config_class=Config):
         data = request.get_json()
 
 
-        # Parse optional FMS expiry date
+        # Parse warranty expiry date (sent as fmsExpiryDate from frontend)
         fms_expiry = None
-        if data.get('fmsExpiryDate'):
+        expiry_raw = data.get('fmsExpiryDate') or data.get('warrantyExpiry')
+        if expiry_raw:
             try:
-                fms_expiry = date.fromisoformat(data['fmsExpiryDate'])
+                fms_expiry = date.fromisoformat(expiry_raw)
             except ValueError:
                 pass
 
@@ -670,6 +672,7 @@ def create_app(config_class=Config):
             area                 = data.get('AREA') or None,
             location             = data.get('LOCATION') or None,
             acms_fms             = data.get('acmsFms') or None,
+            warranty             = data.get('warranty') or 'No',
             fms_expiry_date      = fms_expiry,
             assigned_to          = data.get('assigned_to') or None,
             status               = data.get('status') or 'Available',

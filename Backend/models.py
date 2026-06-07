@@ -68,8 +68,9 @@ class Asset(db.Model):
     location             = db.Column(db.String(100), nullable=True)
 
     # Compliance
-    acms_fms             = db.Column(db.String(10),  nullable=True)   # 'ACMS' | 'FMS'
-    fms_expiry_date      = db.Column(db.Date,        nullable=True)   # only when acms_fms == 'FMS'
+    acms_fms             = db.Column(db.String(100), nullable=True)   # 'ACMS' | 'FMS Alone' | 'System proposed for ACMS'
+    warranty             = db.Column(db.String(3),   nullable=False, default='No')  # 'Yes' | 'No'
+    fms_expiry_date      = db.Column(db.Date,        nullable=True)   # warranty expiry date when warranty='Yes'
 
     # Assignment
     assigned_to          = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
@@ -95,6 +96,7 @@ class Asset(db.Model):
             'AREA':               self.area,
             'LOCATION':           self.location,
             'acmsFms':            self.acms_fms,
+            'warranty':           self.warranty or 'No',
             'fmsExpiryDate':      self.fms_expiry_date.isoformat() if self.fms_expiry_date else None,
             'assigned_to':        self.assigned_to,
             'assignedUserName':   self.assignee.username if self.assignee else None,
