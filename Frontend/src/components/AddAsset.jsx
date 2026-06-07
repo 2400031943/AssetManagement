@@ -119,6 +119,19 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
   // Derived: what cards to show
   const recommendations = searchQ.trim() ? searchResults : myRecs;
 
+  // ── Pagination ───────────────────────────────────────────────────────────
+  const CARDS_PER_PAGE = 4;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever the recommendation list changes
+  useEffect(() => { setCurrentPage(1); }, [recommendations.length, searchQ]);
+
+  const totalPages  = Math.ceil(recommendations.length / CARDS_PER_PAGE);
+  const pagedRecs   = recommendations.slice(
+    (currentPage - 1) * CARDS_PER_PAGE,
+    currentPage * CARDS_PER_PAGE
+  );
+
   const [selectedRecId, setSelectedRecId] = useState(null);
 
   // Fetch MY recommendations on mount
@@ -350,8 +363,8 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
               <div className="rec-empty">No assets found matching "{searchQ}" in COINS.</div>
             )}
 
-            {/* Cards */}
-            {!searching && recommendations.map(rec => (
+            {/* Cards — paginated */}
+            {!searching && pagedRecs.map(rec => (
               <RecommendationCard
                 key={rec.id}
                 rec={rec}
@@ -359,6 +372,55 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
                 onClick={handleCardClick}
               />
             ))}
+
+            {/* Pagination controls */}
+            {!searching && totalPages > 1 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginTop: '0.75rem', padding: '0.6rem 0.2rem',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                    background: currentPage === 1 ? 'rgba(255,255,255,0.04)' : 'var(--accent-primary, #6c63ff)',
+                    color: currentPage === 1 ? 'var(--text-muted)' : '#fff',
+                    border: 'none', borderRadius: '8px',
+                    padding: '0.45rem 1rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
+                    opacity: currentPage === 1 ? 0.45 : 1,
+                  }}
+                >
+                  &#8592; Prev
+                </button>
+
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Page <strong style={{ color: 'var(--text-primary, #fff)' }}>{currentPage}</strong> of{' '}
+                  <strong style={{ color: 'var(--text-primary, #fff)' }}>{totalPages}</strong>
+                  <span style={{ marginLeft: '0.5rem', opacity: 0.6 }}>({recommendations.length} total)</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                    background: currentPage === totalPages ? 'rgba(255,255,255,0.04)' : 'var(--accent-primary, #6c63ff)',
+                    color: currentPage === totalPages ? 'var(--text-muted)' : '#fff',
+                    border: 'none', borderRadius: '8px',
+                    padding: '0.45rem 1rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
+                    opacity: currentPage === totalPages ? 0.45 : 1,
+                  }}
+                >
+                  Next &#8594;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
