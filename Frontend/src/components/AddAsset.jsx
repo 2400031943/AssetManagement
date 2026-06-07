@@ -169,7 +169,12 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
   // ── Form handlers ──────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      // Auto-clear IP when Not in any Network is selected
+      ...(name === 'networkDomain' && value === 'Not in any Network' ? { ipAddress: '' } : {}),
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -538,11 +543,13 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
             </div>
           )}
 
-          {/* IP Address */}
-          <div className="form-group">
-            <label>IP Address</label>
-            <input type="text" name="ipAddress" value={formData.ipAddress} onChange={handleChange} className="login-input" placeholder="e.g. 192.168.1.1" />
-          </div>
+          {/* IP Address — hidden when Not in any Network */}
+          {formData.networkDomain !== 'Not in any Network' && (
+            <div className="form-group">
+              <label>IP Address</label>
+              <input type="text" name="ipAddress" value={formData.ipAddress} onChange={handleChange} className="login-input" placeholder="e.g. 192.168.1.1" />
+            </div>
+          )}
 
           {/* Brief Configuration */}
           <div className="form-group full-width">
