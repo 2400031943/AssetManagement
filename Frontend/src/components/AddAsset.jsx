@@ -90,6 +90,8 @@ const EMPTY_FORM = {
   networkDomain: '', networkDomainOther: '',
   ipAddress: '',
   acmsFms: '',
+  warranty: 'No',
+  warrantyExpiry: '',
   fmsExpiryDate: '',
   Monitor: '', MonitorCustom: '',
   AssetCustodianECNO: '',
@@ -174,6 +176,8 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
       [name]: value,
       // Auto-clear IP when Not in any Network is selected
       ...(name === 'networkDomain' && value === 'Not in any Network' ? { ipAddress: '' } : {}),
+      // Auto-clear warranty expiry when warranty switches to No
+      ...(name === 'warranty' && value === 'No' ? { warrantyExpiry: '', acmsFms: '' } : {}),
     }));
   };
 
@@ -192,7 +196,8 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
       AREA:          formData.AREA          === 'Others' ? formData.AREAOther          : formData.AREA,
       CATEGORY:      formData.CATEGORY      === 'Others' ? formData.CATEGORYOther      : formData.CATEGORY,
       LOCATION:      formData.LOCATION      === 'Others' ? formData.LOCATIONOther      : formData.LOCATION,
-      fmsExpiryDate: formData.acmsFms === 'FMS' ? formData.fmsExpiryDate : '',
+      fmsExpiryDate: formData.warranty === 'Yes' ? formData.warrantyExpiry : '',
+      acmsFms:       formData.acmsFms || '',
     };
 
     try {
@@ -658,28 +663,48 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
             </div>
           )}
 
-          {/* ACMS / FMS */}
+          {/* System Under Warranty */}
           <div className="form-group">
-            <label>ACMS / FMS</label>
-            <select name="acmsFms" value={formData.acmsFms} onChange={handleChange} className="login-input">
-              <option value="">Select ACMS/FMS...</option>
-              <option>ACMS</option>
-              <option>FMS</option>
+            <label>System Under Warranty</label>
+            <select name="warranty" value={formData.warranty} onChange={handleChange} className="login-input">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
             </select>
           </div>
-          {formData.acmsFms === 'FMS' && (
+
+          {/* Warranty Expiry Date — only if warranty = Yes */}
+          {formData.warranty === 'Yes' && (
             <div className="form-group">
-              <label>Date of Expiry *</label>
+              <label>Warranty Expiry Date *</label>
               <input
                 type="date"
-                name="fmsExpiryDate"
-                value={formData.fmsExpiryDate}
+                name="warrantyExpiry"
+                value={formData.warrantyExpiry}
                 onChange={handleChange}
                 required
                 className="login-input"
               />
             </div>
           )}
+
+          {/* Select Category (ACMS/FMS) — options change based on warranty */}
+          <div className="form-group">
+            <label>Select Category</label>
+            <select name="acmsFms" value={formData.acmsFms} onChange={handleChange} className="login-input">
+              <option value="">Select Category...</option>
+              {formData.warranty === 'Yes' ? (
+                <>
+                  <option value="System proposed for ACMS">System proposed for ACMS</option>
+                  <option value="FMS Alone">FMS Alone</option>
+                </>
+              ) : (
+                <>
+                  <option value="ACMS">ACMS</option>
+                  <option value="FMS Alone">FMS Alone</option>
+                </>
+              )}
+            </select>
+          </div>
 
         </div>{/* /form-grid */}
 
