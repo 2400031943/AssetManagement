@@ -5,7 +5,7 @@ from flask_jwt_extended import (
     jwt_required, get_jwt_identity
 )
 from config import Config
-from models import db, User, Asset
+from models import db, User, Asset, AcmsList2027
 from datetime import date
 from sqlalchemy import func, text
 from auth import auth_bp
@@ -680,6 +680,37 @@ def create_app(config_class=Config):
 
         db.session.add(asset)
         db.session.commit()
+
+        # — Mirror to ACMS_list_2027 —
+        try:
+            entry = AcmsList2027(
+                asset_number         = asset.asset_number,
+                serial_number        = asset.serial_number,
+                category             = asset.category,
+                make                 = asset.make,
+                model                = asset.model,
+                configuration        = asset.configuration,
+                network_domain       = asset.network_domain,
+                ip_address           = asset.ip_address,
+                monitor              = asset.monitor,
+                asset_custodian_ecno = asset.asset_custodian_ecno,
+                user_division        = asset.user_division,
+                group_name           = asset.group_name,
+                area                 = asset.area,
+                location             = asset.location,
+                acms_fms             = asset.acms_fms,
+                warranty             = asset.warranty,
+                fms_expiry_date      = asset.fms_expiry_date,
+                assigned_to          = asset.assigned_to,
+                status               = asset.status,
+            )
+            db.session.add(entry)
+            db.session.commit()
+        except Exception as mirror_err:
+            db.session.rollback()
+            # Non-fatal: ACMS_list_2027 may not exist on this machine
+            print(f'[WARN] Could not mirror to ACMS_list_2027: {mirror_err}')
+
         return jsonify(asset.to_dict()), 201
 
     @app.route('/api/assets/<int:asset_id>', methods=['GET'])
@@ -729,6 +760,41 @@ def create_app(config_class=Config):
 
 
         db.session.commit()
+
+        # — Mirror / upsert to ACMS_list_2027 —
+        try:
+            # Try to find an existing row by asset_number + serial_number
+            mirror = AcmsList2027.query.filter_by(
+                asset_number  = asset.asset_number,
+                serial_number = asset.serial_number,
+            ).first()
+            if not mirror:
+                mirror = AcmsList2027()
+                db.session.add(mirror)
+            mirror.asset_number         = asset.asset_number
+            mirror.serial_number        = asset.serial_number
+            mirror.category             = asset.category
+            mirror.make                 = asset.make
+            mirror.model                = asset.model
+            mirror.configuration        = asset.configuration
+            mirror.network_domain       = asset.network_domain
+            mirror.ip_address           = asset.ip_address
+            mirror.monitor              = asset.monitor
+            mirror.asset_custodian_ecno = asset.asset_custodian_ecno
+            mirror.user_division        = asset.user_division
+            mirror.group_name           = asset.group_name
+            mirror.area                 = asset.area
+            mirror.location             = asset.location
+            mirror.acms_fms             = asset.acms_fms
+            mirror.warranty             = asset.warranty
+            mirror.fms_expiry_date      = asset.fms_expiry_date
+            mirror.assigned_to          = asset.assigned_to
+            mirror.status               = asset.status
+            db.session.commit()
+        except Exception as mirror_err:
+            db.session.rollback()
+            print(f'[WARN] Could not mirror update to ACMS_list_2027: {mirror_err}')
+
         return jsonify(asset.to_dict()), 200
 
     @app.route('/api/assets/<int:asset_id>', methods=['DELETE'])

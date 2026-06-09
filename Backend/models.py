@@ -102,3 +102,38 @@ class Asset(db.Model):
             'assignedUserName':   self.assignee.username if self.assignee else None,
             'status':             self.status,
         }
+
+
+class AcmsList2027(db.Model):
+    """Mirror of Asset — written to ACMS_list_2027 table on every save/update."""
+    __tablename__ = 'ACMS_list_2027'
+
+    id                   = db.Column(db.Integer, primary_key=True)
+
+    asset_number         = db.Column(db.String(100), nullable=True)
+    serial_number        = db.Column(db.String(100), nullable=True)
+
+    category             = db.Column(db.String(100), nullable=True)
+    make                 = db.Column(db.String(100), nullable=True)
+    model                = db.Column(db.String(100), nullable=True)
+
+    configuration        = db.Column(db.Text,        nullable=True)
+    network_domain       = db.Column(db.String(100), nullable=True)
+    ip_address           = db.Column(db.String(50),  nullable=True)
+
+    monitor              = db.Column(db.String(100), nullable=True)
+
+    asset_custodian_ecno = db.Column(db.String(50),  nullable=True)
+    user_division        = db.Column(db.String(100), nullable=True)
+    group_name           = db.Column(db.String(100), nullable=True)
+    area                 = db.Column(db.String(100), nullable=True)
+    location             = db.Column(db.String(100), nullable=True)
+
+    acms_fms             = db.Column(db.String(100), nullable=True)
+    warranty             = db.Column(db.String(3),   nullable=True, default='No')
+    fms_expiry_date      = db.Column(db.Date,        nullable=True)
+
+    assigned_to          = db.Column(db.Integer,     nullable=True)
+    status               = db.Column(db.String(50),  nullable=True, default='Available')
+
+    created_at           = db.Column(db.DateTime, default=datetime.utcnow)
