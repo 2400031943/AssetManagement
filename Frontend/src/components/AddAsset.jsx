@@ -601,7 +601,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
         <div className="rec-panel-header">
           <div className="rec-panel-title">
             <LayoutDashboard size={18} className="rec-panel-db-icon" />
-            <span>Recommendations from Current ACMS List</span>
+            <span>Recommendations from 2026 ACMS List</span>
             <span className="rec-panel-subtitle">Sorted by Category</span>
           </div>
         </div>
