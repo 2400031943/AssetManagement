@@ -16,9 +16,16 @@ function recommendationToForm(rec) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Recommendation Card — shows ASSETNO, EQSRLNO, EQPTDESCP
+// Recommendation Card — ASSETNO + EQSRLNO side-by-side, EQPTDESCP collapsible
 // ─────────────────────────────────────────────────────────────────────────────
+const DESC_LIMIT = 120;
+
 function RecommendationCard({ rec, isSelected, onClick }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const desc        = rec.configuration || '';
+  const isLong      = desc.length > DESC_LIMIT;
+  const displayDesc = expanded || !isLong ? desc : desc.slice(0, DESC_LIMIT) + '…';
+
   return (
     <button
       type="button"
@@ -33,46 +40,57 @@ function RecommendationCard({ rec, isSelected, onClick }) {
           ? '2px solid var(--accent-primary, #6c63ff)'
           : '1.5px solid rgba(255,255,255,0.1)',
         borderRadius: '12px',
-        padding: '1rem 1.1rem',
+        padding: '0.75rem 1rem',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        marginBottom: '0.75rem',
+        marginBottom: '0.6rem',
       }}
     >
-      {/* Header row: COINS badge + checkmark */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+      {/* Header: COINS badge + checkmark */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
         <span style={{
-          fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.05em',
+          fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.05em',
           background: 'var(--accent-primary, #6c63ff)', color: '#fff',
           padding: '2px 8px', borderRadius: '20px',
         }}>COINS</span>
-        {isSelected && <CheckCircle2 size={16} style={{ color: 'var(--accent-primary, #6c63ff)' }} />}
+        {isSelected && <CheckCircle2 size={15} style={{ color: 'var(--accent-primary, #6c63ff)' }} />}
       </div>
 
-      {/* ASSETNO */}
-      {rec.assetNumber && (
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
-          <strong>Asset No: </strong>
-          <span style={{ fontFamily: 'monospace' }}>{rec.assetNumber}</span>
+      {/* Asset No + Serial No — side by side */}
+      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: desc ? '0.4rem' : 0 }}>
+        {rec.assetNumber && (
+          <div style={{ fontSize: '0.8rem' }}>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Asset No: </span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{rec.assetNumber}</span>
+          </div>
+        )}
+        <div style={{ fontSize: '0.8rem' }}>
+          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Serial No: </span>
+          <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{rec.serialNumber || '—'}</span>
         </div>
-      )}
-
-      {/* EQSRLNO */}
-      <div style={{ fontSize: '0.92rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-        <strong style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.8rem' }}>Serial No: </strong>
-        <span style={{ fontFamily: 'monospace' }}>{rec.serialNumber || '—'}</span>
       </div>
 
-      {/* EQPTDESCP */}
-      {rec.configuration && (
-        <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary, #a0aec0)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+      {/* EQPTDESCP — collapsible */}
+      {desc && (
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #a0aec0)', lineHeight: 1.5 }}>
           <strong style={{ color: 'var(--text-muted)' }}>EQPTDESCP: </strong>
-          {rec.configuration}
+          <span style={{ wordBreak: 'break-word' }}>{displayDesc}</span>
+          {isLong && (
+            <span
+              onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+              style={{
+                marginLeft: '0.3rem', color: 'var(--accent-primary, #6c63ff)',
+                fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              {expanded ? ' show less ▲' : ' show more ▼'}
+            </span>
+          )}
         </div>
       )}
 
       {/* CTA */}
-      <div style={{ marginTop: '0.65rem', fontSize: '0.8rem', color: 'var(--accent-primary, #6c63ff)', fontWeight: 600 }}>
+      <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--accent-primary, #6c63ff)', fontWeight: 600 }}>
         {isSelected ? '✓ Selected — Asset No., Serial No. & Configuration pre-filled' : 'Click to pre-fill Asset No., Serial No. & Configuration →'}
       </div>
     </button>
