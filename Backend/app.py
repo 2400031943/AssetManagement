@@ -696,7 +696,7 @@ def create_app(config_class=Config):
         data  = request.get_json()
 
         for field, col in {
-            'name':               'name',
+            'assetNumber':        'asset_number',
             'serialNumber':       'serial_number',
             'CATEGORY':           'category',
             'make':               'make',
@@ -711,17 +711,22 @@ def create_app(config_class=Config):
             'AREA':               'area',
             'LOCATION':           'location',
             'acmsFms':            'acms_fms',
+            'warranty':           'warranty',
             'assigned_to':        'assigned_to',
             'status':             'status',
         }.items():
             if field in data:
                 setattr(asset, col, data[field] or None)
 
-        if 'fmsExpiryDate' in data and data['fmsExpiryDate']:
+        expiry_raw = data.get('fmsExpiryDate') or data.get('warrantyExpiry')
+        if expiry_raw:
             try:
-                asset.fms_expiry_date = date.fromisoformat(data['fmsExpiryDate'])
+                asset.fms_expiry_date = date.fromisoformat(expiry_raw)
             except ValueError:
                 pass
+        elif 'fmsExpiryDate' in data and not data['fmsExpiryDate']:
+            asset.fms_expiry_date = None
+
 
         db.session.commit()
         return jsonify(asset.to_dict()), 200

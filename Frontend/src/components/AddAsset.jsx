@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X } from 'lucide-react';
-import { getAssetRecommendations, searchAssetRecommendations } from '../api';
+import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard } from 'lucide-react';
+import { getAssetRecommendations, searchAssetRecommendations, getMyAssets } from '../api';
 import '../pages/Dashboard.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,8 +98,91 @@ function RecommendationCard({ rec, isSelected, onClick }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main AddAsset component
+// Map an existing local asset back into form fields (for Edit mode)
 // ─────────────────────────────────────────────────────────────────────────────
+function assetToForm(asset) {
+  return {
+    ...EMPTY_FORM,
+    assetNumber:        asset.assetNumber   || '',
+    serialNumber:       asset.serialNumber  || '',
+    make:               asset.make          || '',
+    model:              asset.model         || '',
+    configuration:      asset.configuration || '',
+    networkDomain:      asset.networkDomain || '',
+    ipAddress:          asset.ipAddress     || '',
+    Monitor:            asset.Monitor       || '',
+    AssetCustodianECNO: asset.AssetCustodianECNO || '',
+    UserDivision:       asset.UserDivision  || '',
+    GROUP:              asset.GROUP         || '',
+    AREA:               asset.AREA          || '',
+    CATEGORY:           asset.CATEGORY      || '',
+    LOCATION:           asset.LOCATION      || '',
+    acmsFms:            asset.acmsFms       || '',
+    warranty:           asset.warranty      || 'No',
+    warrantyExpiry:     asset.fmsExpiryDate || '',
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACMS List Card — shows existing asset with Edit button
+// ─────────────────────────────────────────────────────────────────────────────
+function AcmsCard({ asset, onEdit }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1.5px solid rgba(255,255,255,0.08)',
+      borderRadius: '10px',
+      padding: '0.7rem 1rem',
+      marginBottom: '0.5rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '1rem',
+    }}>
+      {/* Asset info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
+          {asset.assetNumber && (
+            <span style={{ fontSize: '0.8rem' }}>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Asset No: </span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{asset.assetNumber}</span>
+            </span>
+          )}
+          {asset.serialNumber && (
+            <span style={{ fontSize: '0.8rem' }}>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Serial: </span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{asset.serialNumber}</span>
+            </span>
+          )}
+        </div>
+        {(asset.make || asset.model) && (
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+            {[asset.make, asset.model].filter(Boolean).join(' · ')}
+          </div>
+        )}
+      </div>
+
+      {/* Edit button */}
+      <button
+        type="button"
+        onClick={() => onEdit(asset)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.3rem',
+          background: 'rgba(108,99,255,0.15)',
+          border: '1px solid rgba(108,99,255,0.4)',
+          borderRadius: '7px',
+          padding: '0.35rem 0.75rem',
+          color: 'var(--accent-primary, #6c63ff)',
+          fontWeight: 600, fontSize: '0.8rem',
+          cursor: 'pointer', transition: 'all 0.2s',
+          flexShrink: 0,
+        }}
+      >
+        <Pencil size={13} /> Edit
+      </button>
+    </div>
+  );
+}
 const EMPTY_FORM = {
   assetNumber: '',
   serialNumber: '',
@@ -121,23 +204,32 @@ const EMPTY_FORM = {
   LOCATION: '', LOCATIONOther: '',
 };
 
-export default function AddAsset({ onAddAsset, onSuccess }) {
+export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
   const [formData, setFormData]           = useState(EMPTY_FORM);
   const [status, setStatus]               = useState({ type: null, message: '' });
-  const [saved, setSaved]                 = useState(false);  // controls success overlay
+  const [saved, setSaved]                 = useState(false);
 
-  // ── My recommendations (emp_code filtered) ───────────────────────────
+  // ── Form mode: null = hidden | 'add' = new from COINS | 'edit' = editing existing
+  const [formMode, setFormMode]           = useState(null);
+  const [editingAsset, setEditingAsset]   = useState(null);
+  const formRef                           = useRef(null);
+
+  // ── COINS recommendations (remote DB)
   const [myRecs, setMyRecs]               = useState([]);
   const [recLoading, setRecLoading]       = useState(true);
   const [recError, setRecError]           = useState(false);
 
-  // ── Search state ───────────────────────────────────────────────
+  // ── ACMS list (local DB — user's existing assets)
+  const [acmsAssets, setAcmsAssets]       = useState([]);
+  const [acmsLoading, setAcmsLoading]     = useState(true);
+
+  // ── Search state
   const [searchQ, setSearchQ]             = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching]         = useState(false);
   const searchTimer                       = useRef(null);
 
-  // Derived: what cards to show
+  // Derived: what COINS cards to show
   const recommendations = searchQ.trim() ? searchResults : myRecs;
 
   // ── Pagination ───────────────────────────────────────────────────────────
@@ -155,7 +247,7 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
 
   const [selectedRecId, setSelectedRecId] = useState(null);
 
-  // Fetch MY recommendations on mount
+  // Fetch MY COINS recommendations on mount
   useEffect(() => {
     setRecLoading(true);
     setRecError(false);
@@ -163,6 +255,15 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
       .then(data => setMyRecs(Array.isArray(data) ? data : []))
       .catch(() => setRecError(true))
       .finally(() => setRecLoading(false));
+  }, []);
+
+  // Fetch user's existing ACMS assets on mount
+  useEffect(() => {
+    setAcmsLoading(true);
+    getMyAssets()
+      .then(data => setAcmsAssets(Array.isArray(data) ? data : []))
+      .catch(() => setAcmsAssets([]))
+      .finally(() => setAcmsLoading(false));
   }, []);
 
   // Debounced search — fires 400ms after user stops typing
@@ -200,9 +301,45 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
     }));
   };
 
+
+  // ── Card click handler: COINS card → open form in Add mode
+  const handleCardClick = (rec) => {
+    if (selectedRecId === rec.id) {
+      setSelectedRecId(null);
+      setFormData(prev => ({ ...prev, assetNumber: '', serialNumber: '', configuration: '' }));
+      setFormMode(null);
+    } else {
+      setSelectedRecId(rec.id);
+      setFormData(recommendationToForm(rec));
+      setFormMode('add');
+      setEditingAsset(null);
+      setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+  };
+
+  // ── Edit button click: ACMS card → open form in Edit mode
+  const handleEditClick = (asset) => {
+    setFormMode('edit');
+    setEditingAsset(asset);
+    setFormData(assetToForm(asset));
+    setSelectedRecId(null);
+    setStatus({ type: null, message: '' });
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  };
+
+  // ── Close form
+  const handleFormClose = () => {
+    setFormMode(null);
+    setEditingAsset(null);
+    setFormData(EMPTY_FORM);
+    setSelectedRecId(null);
+    setStatus({ type: null, message: '' });
+  };
+
+  // ── Form submit: Add (POST) or Edit (PUT)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus({ type: 'loading', message: 'Saving asset...' });
+    setStatus({ type: 'loading', message: formMode === 'edit' ? 'Updating asset…' : 'Saving asset…' });
 
     const payload = {
       ...formData,
@@ -220,29 +357,34 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
     };
 
     try {
-      await onAddAsset(payload);
-      setFormData(EMPTY_FORM);
-      setSelectedRecId(null);
-      setSearchQ('');
-      setSearchResults([]);
-      setSaved(true);   // show success overlay
-      setTimeout(() => {
-        setSaved(false);
-        if (onSuccess) onSuccess();  // switch to My ACMS Systems List
-      }, 2500);
+      if (formMode === 'edit' && editingAsset) {
+        // — UPDATE existing asset
+        await onUpdateAsset(editingAsset.id, payload);
+        // Refresh local ACMS list
+        const refreshed = await getMyAssets();
+        setAcmsAssets(Array.isArray(refreshed) ? refreshed : []);
+        setStatus({ type: 'success', message: '✓ Asset updated successfully!' });
+        setTimeout(() => {
+          setStatus({ type: null, message: '' });
+          setFormMode(null);
+          setEditingAsset(null);
+          setFormData(EMPTY_FORM);
+        }, 2000);
+      } else {
+        // — ADD new asset
+        await onAddAsset(payload);
+        setFormData(EMPTY_FORM);
+        setSelectedRecId(null);
+        setSearchQ('');
+        setSearchResults([]);
+        setSaved(true);
+        setTimeout(() => {
+          setSaved(false);
+          if (onSuccess) onSuccess();
+        }, 2500);
+      }
     } catch (err) {
-      setStatus({ type: 'error', message: err.message || 'Failed to save asset. Please try again.' });
-    }
-  };
-
-  // ── Card click handler ────────────────────────────────────────────────────
-  const handleCardClick = (rec) => {
-    if (selectedRecId === rec.id) {
-      setSelectedRecId(null);
-      setFormData(prev => ({ ...prev, assetNumber: '', serialNumber: '', configuration: '' }));
-    } else {
-      setSelectedRecId(rec.id);
-      setFormData(recommendationToForm(rec));
+      setStatus({ type: 'error', message: err.message || 'Operation failed. Please try again.' });
     }
   };
 
@@ -294,12 +436,12 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
         </div>
       )}
 
-      {/* ── Page header ────────────────────────────────────────────────────── */}
+      {/* Page header */}
       <div className="section-header" style={{ marginBottom: '1.5rem' }}>
         <div>
           <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>Add System to ACMS List</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Select a recommendation from <strong>COINS</strong> to pre-fill Serial Number &amp; Configuration, then fill in the remaining fields.
+            Browse <strong>COINS</strong> or your <strong>Current ACMS List</strong> below. Click a card to open the form.
           </p>
         </div>
       </div>
@@ -376,7 +518,7 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
                 ? searching
                   ? 'Searching COINS…'
                   : `${recommendations.length} result(s) for "${searchQ}"`
-                : 'Your assets from COINS — click a card to pre-fill the form.'}
+                : 'Your assets from COINS — click a card to open the Add form.'}
             </p>
 
             {/* Searching spinner */}
@@ -452,17 +594,105 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
             )}
           </div>
         )}
-      </div>
+      </div>{/* /COINS panel */}
 
-      {/* ── Status banner ─────────────────────────────────────────────────── */}
-      {status.message && (
-        <div className={`status-banner ${status.type}`} style={{ marginBottom: '1.5rem' }}>
-          {status.message}
+      {/* ── Recommendations from Current ACMS List ────────────────────── */}
+      <div className="rec-panel glass-panel" style={{ marginBottom: '2rem' }}>
+        <div className="rec-panel-header">
+          <div className="rec-panel-title">
+            <LayoutDashboard size={18} className="rec-panel-db-icon" />
+            <span>Recommendations from Current ACMS List</span>
+            <span className="rec-panel-subtitle">Sorted by Category</span>
+          </div>
         </div>
-      )}
 
-      {/* ── Asset Form ────────────────────────────────────────────────────── */}
-      <form className="asset-form glass-panel" onSubmit={handleSubmit}>
+        {acmsLoading && (
+          <div className="rec-loading">
+            <Loader2 size={20} className="rec-spinner" />
+            <span>Loading your ACMS systems…</span>
+          </div>
+        )}
+
+        {!acmsLoading && acmsAssets.length === 0 && (
+          <div className="rec-empty">No assets in your ACMS list yet. Add one using the form below.</div>
+        )}
+
+        {!acmsLoading && acmsAssets.length > 0 && (() => {
+          // Group by category, sorted alphabetically
+          const groups = acmsAssets.reduce((acc, asset) => {
+            const cat = asset.CATEGORY || asset.category || 'Uncategorized';
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(asset);
+            return acc;
+          }, {});
+          return (
+            <div style={{ padding: '0 1rem 1rem' }}>
+              {Object.entries(groups)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([cat, items]) => (
+                  <div key={cat} style={{ marginBottom: '1rem' }}>
+                    {/* Category header */}
+                    <div style={{
+                      fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
+                      color: 'var(--accent-primary, #6c63ff)', textTransform: 'uppercase',
+                      padding: '0.35rem 0', marginBottom: '0.5rem',
+                      borderBottom: '1px solid rgba(108,99,255,0.2)',
+                    }}>
+                      {cat} &nbsp;<span style={{ opacity: 0.55, fontWeight: 500 }}>({items.length})</span>
+                    </div>
+                    {items.map(asset => (
+                      <AcmsCard key={asset.id} asset={asset} onEdit={handleEditClick} />
+                    ))}
+                  </div>
+                ))}
+            </div>
+          );
+        })()}
+      </div>{/* /ACMS panel */}
+
+      {/* ── Form — appears only when formMode is set ────────────────────── */}
+      {formMode && (
+        <div ref={formRef}>
+          {/* Form mode header */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginBottom: '1rem',
+          }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                {formMode === 'edit'
+                  ? `✏️ Edit Asset: ${editingAsset?.assetNumber || editingAsset?.serialNumber || 'Asset'}`
+                  : '➕ Add New System'}
+              </h3>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                {formMode === 'edit'
+                  ? 'Update the fields below and click Update Asset.'
+                  : 'Fields pre-filled from COINS. Complete remaining details.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleFormClose}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.3rem',
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '8px', padding: '0.4rem 0.85rem',
+                color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 600, fontSize: '0.83rem',
+              }}
+            >
+              <X size={14} /> Close
+            </button>
+          </div>
+
+          {/* Status banner inside form wrapper */}
+          {status.message && (
+            <div className={`status-banner ${status.type}`} style={{ marginBottom: '1.5rem' }}>
+              {status.message}
+            </div>
+          )}
+
+          {/* ── Asset Form ─────────────────────────────────────────── */}
+          <form className="asset-form glass-panel" onSubmit={handleSubmit}>
 
         <div className="form-grid">
 
@@ -728,13 +958,19 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
         </div>{/* /form-grid */}
 
         <div className="form-actions">
-          <button type="submit" className="submit-btn login-btn" disabled={status.type === 'loading'}>
-            <Save size={18} />
-            <span>{status.type === 'loading' ? 'Saving…' : 'Save to ACMS Systems Management'}</span>
-          </button>
+            <button type="submit" className="submit-btn login-btn" disabled={status.type === 'loading'}>
+              <Save size={18} />
+              <span>{status.type === 'loading'
+                ? (formMode === 'edit' ? 'Updating…' : 'Saving…')
+                : (formMode === 'edit' ? 'Update Asset' : 'Save to ACMS Systems Management')}
+              </span>
+            </button>
         </div>
 
-      </form>
+          </form>
+        </div>
+      )}{/* /formMode */}
+
     </div>
   );
 }

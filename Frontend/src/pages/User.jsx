@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LogOut, Database, LayoutDashboard, PlusCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from '../routes';
-import { getMyAssets, createAsset } from '../api';
+import { getMyAssets, createAsset, updateAsset } from '../api';
 import { getStoredSession, clearStoredSession } from '../authSession';
 import MyAssets from '../components/MyAssets';
 import AddAsset from '../components/AddAsset';
@@ -82,6 +82,17 @@ export default function User() {
     }
   };
 
+  const handleUpdateAsset = async (assetId, updatedData) => {
+    try {
+      const updated = await updateAsset(assetId, updatedData);
+      setAssets(prev => prev.map(a => a.id === assetId ? updated : a));
+      return { success: true };
+    } catch (err) {
+      console.error('Failed to update asset:', err);
+      throw err;
+    }
+  };
+
   const switchToMyAssets = () => setActiveTab('my-assets');
 
   return (
@@ -142,7 +153,7 @@ export default function User() {
             onRefresh={fetchMyAssets}
           />
         )}
-        {activeTab === 'add-asset' && <AddAsset onAddAsset={handleAddAsset} onSuccess={switchToMyAssets} />}
+        {activeTab === 'add-asset' && <AddAsset onAddAsset={handleAddAsset} onUpdateAsset={handleUpdateAsset} onSuccess={switchToMyAssets} />}
       </main>
     </div>
   );
