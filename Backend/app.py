@@ -589,6 +589,17 @@ def create_app(config_class=Config):
             print(f"Failed to fetch recommendations from remote cowmis DB: {e}")
             return jsonify([]), 200
 
+        # — Filter out assets already saved in ACMS_list_2027 —
+        try:
+            existing_serials = {
+                row.serial_number
+                for row in AcmsList2027.query.with_entities(AcmsList2027.serial_number).all()
+                if row.serial_number
+            }
+            remote_assets = [a for a in remote_assets if a.get('serialNumber') not in existing_serials]
+        except Exception as fe:
+            print(f'[WARN] Could not filter by ACMS_list_2027: {fe}')  # table may not exist here
+
         return jsonify(remote_assets), 200
 
     @app.route('/api/assets/recommendations/search', methods=['GET'])
@@ -633,6 +644,18 @@ def create_app(config_class=Config):
                 }
                 for i, row in enumerate(rows)
             ]
+
+            # — Filter out serial numbers already in ACMS_list_2027 —
+            try:
+                existing_serials = {
+                    row.serial_number
+                    for row in AcmsList2027.query.with_entities(AcmsList2027.serial_number).all()
+                    if row.serial_number
+                }
+                results = [r for r in results if r.get('serialNumber') not in existing_serials]
+            except Exception as fe:
+                print(f'[WARN] Could not filter search by ACMS_list_2027: {fe}')
+
             return jsonify(results), 200
 
         except Exception as e:
