@@ -9,6 +9,7 @@ import '../pages/Dashboard.css';
 function recommendationToForm(rec) {
   return {
     ...EMPTY_FORM,
+    assetNumber:   rec.assetNumber   || '',
     serialNumber:  rec.serialNumber  || '',
     configuration: rec.configuration || '',
   };
@@ -72,7 +73,7 @@ function RecommendationCard({ rec, isSelected, onClick }) {
 
       {/* CTA */}
       <div style={{ marginTop: '0.65rem', fontSize: '0.8rem', color: 'var(--accent-primary, #6c63ff)', fontWeight: 600 }}>
-        {isSelected ? '✓ Selected — Serial No. & Configuration pre-filled' : 'Click to pre-fill Serial No. & Configuration →'}
+        {isSelected ? '✓ Selected — Asset No., Serial No. & Configuration pre-filled' : 'Click to pre-fill Asset No., Serial No. & Configuration →'}
       </div>
     </button>
   );
@@ -220,7 +221,7 @@ export default function AddAsset({ onAddAsset, onSuccess }) {
   const handleCardClick = (rec) => {
     if (selectedRecId === rec.id) {
       setSelectedRecId(null);
-      setFormData(prev => ({ ...prev, serialNumber: '', configuration: '' }));
+      setFormData(prev => ({ ...prev, assetNumber: '', serialNumber: '', configuration: '' }));
     } else {
       setSelectedRecId(rec.id);
       setFormData(recommendationToForm(rec));
