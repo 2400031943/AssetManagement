@@ -452,6 +452,54 @@ def create_app(config_class=Config):
 
         return jsonify([a.to_dict() for a in assets]), 200
 
+    @app.route('/api/assets/acms2027/mine', methods=['GET'])
+    @jwt_required()
+    def get_my_acms2027_assets():
+        """
+        Return assets from dbo.ACMS_list_2027 where asset_custodian_ecno
+        matches the logged-in employee's ECNO.
+        Returns [] gracefully if the table doesn't exist on this machine.
+        """
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        employee_code   = (current_user.emp_code or '').strip().upper()
+
+        if not employee_code:
+            return jsonify([]), 200
+
+        try:
+            rows = AcmsList2027.query.filter(
+                func.upper(func.ltrim(func.rtrim(AcmsList2027.asset_custodian_ecno))) == employee_code
+            ).all()
+            result = []
+            for r in rows:
+                result.append({
+                    'id':                  r.id,
+                    'assetNumber':         r.asset_number,
+                    'serialNumber':        r.serial_number,
+                    'CATEGORY':            r.category,
+                    'make':                r.make,
+                    'model':               r.model,
+                    'configuration':       r.configuration,
+                    'networkDomain':       r.network_domain,
+                    'ipAddress':           r.ip_address,
+                    'Monitor':             r.monitor,
+                    'AssetCustodianECNO':  r.asset_custodian_ecno,
+                    'UserDivision':        r.user_division,
+                    'GROUP':               r.group_name,
+                    'AREA':                r.area,
+                    'LOCATION':            r.location,
+                    'acmsFms':             r.acms_fms,
+                    'warranty':            r.warranty,
+                    'fmsExpiryDate':       r.fms_expiry_date.isoformat() if r.fms_expiry_date else None,
+                    'status':              r.status,
+                })
+            return jsonify(result), 200
+        except Exception as e:
+            print(f"[ACMS2027] Could not query dbo.ACMS_list_2027: {e}")
+            return jsonify([]), 200
+
+
     @app.route('/api/admin/import-assets', methods=['POST'])
     def import_assets_from_acms_fms():
         """

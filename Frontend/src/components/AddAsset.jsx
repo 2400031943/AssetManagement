@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard } from 'lucide-react';
-import { getAssetRecommendations, searchAssetRecommendations, getMyAssets } from '../api';
+import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard, ListChecks } from 'lucide-react';
+import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets } from '../api';
 import '../pages/Dashboard.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -219,9 +219,13 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
   const [recLoading, setRecLoading]       = useState(true);
   const [recError, setRecError]           = useState(false);
 
-  // ── ACMS list (local DB — user's existing assets)
+  // ── ACMS list (local DB — user's existing assets from dbo.assets)
   const [acmsAssets, setAcmsAssets]       = useState([]);
   const [acmsLoading, setAcmsLoading]     = useState(true);
+
+  // ── My ACMS List (from dbo.ACMS_list_2027)
+  const [acms2027, setAcms2027]           = useState([]);
+  const [acms2027Loading, setAcms2027Loading] = useState(true);
 
   // ── Search state
   const [searchQ, setSearchQ]             = useState('');
@@ -257,13 +261,22 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
       .finally(() => setRecLoading(false));
   }, []);
 
-  // Fetch user's existing ACMS assets on mount
+  // Fetch user's existing ACMS assets on mount (dbo.assets)
   useEffect(() => {
     setAcmsLoading(true);
     getMyAssets()
       .then(data => setAcmsAssets(Array.isArray(data) ? data : []))
       .catch(() => setAcmsAssets([]))
       .finally(() => setAcmsLoading(false));
+  }, []);
+
+  // Fetch My ACMS List from dbo.ACMS_list_2027 on mount
+  useEffect(() => {
+    setAcms2027Loading(true);
+    getMyAcms2027Assets()
+      .then(data => setAcms2027(Array.isArray(data) ? data : []))
+      .catch(() => setAcms2027([]))
+      .finally(() => setAcms2027Loading(false));
   }, []);
 
   // Debounced search — fires 400ms after user stops typing
@@ -649,6 +662,119 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
                       </div>
                       {items.map(asset => (
                         <AcmsCard key={asset.id} asset={asset} onEdit={handleEditClick} />
+                      ))}
+                    </div>
+                  ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ── My ACMS List (from dbo.ACMS_list_2027) ──────────────────────── */}
+      {activeTabMode === 'add-asset' && (
+        <div className="rec-panel glass-panel" style={{ marginBottom: '2rem' }}>
+          <div className="rec-panel-header">
+            <div className="rec-panel-title">
+              <ListChecks size={18} className="rec-panel-db-icon" />
+              <span>My ACMS List</span>
+              <span className="rec-panel-subtitle">From ACMS_list_2027 · Grouped by Category</span>
+            </div>
+            {!acms2027Loading && (
+              <span style={{
+                fontSize: '0.72rem', fontWeight: 700,
+                background: 'rgba(108,99,255,0.15)',
+                color: 'var(--accent-primary, #6c63ff)',
+                padding: '2px 10px', borderRadius: '20px',
+              }}>
+                {acms2027.length} record{acms2027.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+
+          {/* Loading */}
+          {acms2027Loading && (
+            <div className="rec-loading">
+              <Loader2 size={20} className="rec-spinner" />
+              <span>Loading from ACMS_list_2027…</span>
+            </div>
+          )}
+
+          {/* Empty */}
+          {!acms2027Loading && acms2027.length === 0 && (
+            <div className="rec-empty">
+              No records found in ACMS_list_2027 for your employee code.
+            </div>
+          )}
+
+          {/* Records grouped by category */}
+          {!acms2027Loading && acms2027.length > 0 && (() => {
+            const groups = acms2027.reduce((acc, asset) => {
+              const cat = asset.CATEGORY || 'Uncategorized';
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(asset);
+              return acc;
+            }, {});
+            return (
+              <div style={{ padding: '0 1rem 1rem' }}>
+                {Object.entries(groups)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([cat, items]) => (
+                    <div key={cat} style={{ marginBottom: '1.2rem' }}>
+                      {/* Category header */}
+                      <div style={{
+                        fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
+                        color: 'var(--accent-primary, #6c63ff)', textTransform: 'uppercase',
+                        padding: '0.35rem 0', marginBottom: '0.5rem',
+                        borderBottom: '1px solid rgba(108,99,255,0.2)',
+                      }}>
+                        {cat}&nbsp;<span style={{ opacity: 0.55, fontWeight: 500 }}>({items.length})</span>
+                      </div>
+                      {items.map(asset => (
+                        <div key={asset.id} style={{
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1.5px solid rgba(255,255,255,0.08)',
+                          borderRadius: '10px',
+                          padding: '0.65rem 1rem',
+                          marginBottom: '0.45rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '1.2rem',
+                          flexWrap: 'wrap',
+                        }}>
+                          {/* Asset No */}
+                          {asset.assetNumber && (
+                            <span style={{ fontSize: '0.8rem' }}>
+                              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Asset No: </span>
+                              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{asset.assetNumber}</span>
+                            </span>
+                          )}
+                          {/* Serial No */}
+                          {asset.serialNumber && (
+                            <span style={{ fontSize: '0.8rem' }}>
+                              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Serial: </span>
+                              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{asset.serialNumber}</span>
+                            </span>
+                          )}
+                          {/* Make · Model */}
+                          {(asset.make || asset.model) && (
+                            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                              {[asset.make, asset.model].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
+                          {/* ACMS/FMS badge */}
+                          {asset.acmsFms && (
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.04em',
+                              background: asset.acmsFms.includes('FMS') ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)',
+                              color: asset.acmsFms.includes('FMS') ? '#f59e0b' : '#22c55e',
+                              padding: '2px 8px', borderRadius: '20px',
+                              marginLeft: 'auto', flexShrink: 0,
+                            }}>
+                              {asset.acmsFms}
+                            </span>
+                          )}
+                        </div>
                       ))}
                     </div>
                   ))}

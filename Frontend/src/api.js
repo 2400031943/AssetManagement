@@ -157,6 +157,19 @@ export async function getMyAssets() {
 }
 
 /**
+ * Fetch the logged-in user's records from dbo.ACMS_list_2027.
+ * Returns [] gracefully when the table doesn't exist on this machine.
+ */
+export async function getMyAcms2027Assets() {
+  if (USE_MOCK) {
+    // No mock data for this table — it lives only on the production DB
+    await delay(400);
+    return [];
+  }
+  return apiFetch('/assets/acms2027/mine');
+}
+
+/**
  * Fetch asset recommendations from the remote cowmis database (ACMS$ / FMS$ tables).
  * These are shown on the Add Asset page so the user can quickly pre-fill the form.
  */
