@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LogOut, Database, LayoutDashboard, PlusCircle, RefreshCw, Sparkles } from 'lucide-react';
+import { LogOut, Database, LayoutDashboard, PlusCircle, RefreshCw, Sparkles, Clock } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getMyAssets, createAsset, updateAsset } from '../api';
 import { getStoredSession, clearStoredSession } from '../authSession';
 import MyAssets from '../components/MyAssets';
 import AddAsset from '../components/AddAsset';
+import ApprovalPending from '../components/ApprovalPending';
 import './Dashboard.css';
 
 export default function User() {
@@ -14,7 +15,7 @@ export default function User() {
   const footerName        = loggedInUser.employeeName        || loggedInUser.EMPLOYEENAME  || loggedInUser.name     || loggedInUser.username || employeeCode;
   const footerCode        = loggedInUser.employeeCode        || loggedInUser.EMPLOYEECODE  || loggedInUser.emp_code || employeeCode;
   const footerDesignation = loggedInUser.employeeDesignation || loggedInUser.DESGFULLNAME  || '';
-  const [activeTab, setActiveTab] = useState('my-assets');
+  const [activeTab, setActiveTab] = useState('approval-pending');
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -105,6 +106,12 @@ export default function User() {
 
         <nav className="sidebar-nav">
           <button
+            className={`nav-item ${activeTab === 'approval-pending' ? 'active' : ''}`}
+            onClick={() => handleTabChange('approval-pending')}
+          >
+            <Clock size={20} /><span>Approval Pending List</span>
+          </button>
+          <button
             className={`nav-item ${activeTab === 'my-assets' ? 'active' : ''}`}
             onClick={() => handleTabChange('my-assets')}
           >
@@ -150,6 +157,9 @@ export default function User() {
       </aside>
 
       <main className="dashboard-main-content">
+        {activeTab === 'approval-pending' && (
+          <ApprovalPending />
+        )}
         {activeTab === 'my-assets' && (
           <MyAssets
             assets={assets}
