@@ -1,6 +1,6 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
-import './Dashboard.css';
+import '../pages/Dashboard.css';
 
 export default function ApprovalPending() {
   return (
