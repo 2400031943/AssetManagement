@@ -424,10 +424,10 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
             </div>
 
             <h2 style={{ color: '#22c55e', fontSize: '1.6rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-              Asset Saved Successfully!
+              System successfully saved to Your ACMS list!
             </h2>
             <p style={{ color: '#a0aec0', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-              The asset has been added to <strong style={{ color: '#fff' }}>ACMS Systems Management</strong>.
+              The system has been added to your <strong style={{ color: '#fff' }}>ACMS Systems Management</strong> list.
             </p>
             <p style={{ color: '#718096', fontSize: '0.82rem' }}>
               Redirecting to My ACMS Systems List…
