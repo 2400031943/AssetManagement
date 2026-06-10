@@ -230,6 +230,19 @@ function assetToForm(asset) {
 // ACMS List Card — shows existing asset with Edit button
 // ─────────────────────────────────────────────────────────────────────────────
 function AcmsCard({ asset, onEdit }) {
+  const [showDetails, setShowDetails] = React.useState(false);
+
+  // Helper to render a field if it exists
+  const DetailRow = ({ label, value }) => {
+    if (!value || value === '—' || value === 'None' || value === 'null') return null;
+    return (
+      <div style={{ fontSize: '0.78rem', marginBottom: '0.3rem' }}>
+        <strong style={{ color: 'var(--text-muted)' }}>{label}: </strong>
+        <span style={{ color: 'var(--text-secondary, #a0aec0)' }}>{value}</span>
+      </div>
+    );
+  };
+
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)',
@@ -238,51 +251,123 @@ function AcmsCard({ asset, onEdit }) {
       padding: '0.7rem 1rem',
       marginBottom: '0.5rem',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '1rem',
+      flexDirection: 'column',
     }}>
-      {/* Asset info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
-          {asset.assetNumber && (
-            <span style={{ fontSize: '0.8rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Asset No: </span>
-              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{asset.assetNumber}</span>
-            </span>
-          )}
-          {asset.serialNumber && (
-            <span style={{ fontSize: '0.8rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Serial: </span>
-              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{asset.serialNumber}</span>
-            </span>
-          )}
-        </div>
-        {(asset.make || asset.model) && (
-          <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-            {[asset.make, asset.model].filter(Boolean).join(' · ')}
+      {/* Top row: Asset Info + Actions */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '1rem',
+      }}>
+        {/* Basic Asset info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
+            {asset.assetNumber && (
+              <span style={{ fontSize: '0.8rem' }}>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Asset No: </span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{asset.assetNumber}</span>
+              </span>
+            )}
+            {asset.serialNumber && (
+              <span style={{ fontSize: '0.8rem' }}>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Serial: </span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{asset.serialNumber}</span>
+              </span>
+            )}
           </div>
-        )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap', marginTop: '0.1rem' }}>
+            {(asset.make || asset.model) && (
+              <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                {[asset.make, asset.model].filter(Boolean).join(' · ')}
+              </span>
+            )}
+            {asset.acmsFms && (
+              <span style={{
+                fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em',
+                background: asset.acmsFms.includes('FMS') ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)',
+                color: asset.acmsFms.includes('FMS') ? '#f59e0b' : '#22c55e',
+                padding: '1px 6px', borderRadius: '20px',
+              }}>
+                {asset.acmsFms}
+              </span>
+            )}
+            {asset.status && (
+              <span style={{
+                fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)',
+                border: '1px solid rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '20px'
+              }}>
+                {asset.status}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setShowDetails(!showDetails)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+              padding: '0.35rem', transition: 'color 0.2s',
+            }}
+            title="Toggle Details"
+          >
+            {showDetails ? 'Hide Details ▲' : 'Show Details ▼'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onEdit(asset)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              background: 'rgba(108,99,255,0.15)',
+              border: '1px solid rgba(108,99,255,0.4)',
+              borderRadius: '7px',
+              padding: '0.35rem 0.75rem',
+              color: 'var(--accent-primary, #6c63ff)',
+              fontWeight: 600, fontSize: '0.8rem',
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}
+          >
+            <Pencil size={13} /> Add
+          </button>
+        </div>
       </div>
 
-      {/* Edit button */}
-      <button
-        type="button"
-        onClick={() => onEdit(asset)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '0.3rem',
-          background: 'rgba(108,99,255,0.15)',
-          border: '1px solid rgba(108,99,255,0.4)',
-          borderRadius: '7px',
-          padding: '0.35rem 0.75rem',
-          color: 'var(--accent-primary, #6c63ff)',
-          fontWeight: 600, fontSize: '0.8rem',
-          cursor: 'pointer', transition: 'all 0.2s',
-          flexShrink: 0,
-        }}
-      >
-        <Pencil size={13} /> Add
-      </button>
+      {/* Expanded Details Section */}
+      {showDetails && (
+        <div style={{
+          marginTop: '0.8rem', paddingTop: '0.8rem',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem'
+        }}>
+          <div>
+            <DetailRow label="Network Domain" value={asset.networkDomain} />
+            <DetailRow label="IP Address" value={asset.ipAddress} />
+            <DetailRow label="Monitor" value={asset.Monitor || asset.monitor} />
+            <DetailRow label="Custodian ECNO" value={asset.AssetCustodianECNO || asset.asset_custodian_ecno} />
+          </div>
+          <div>
+            <DetailRow label="User Division" value={asset.UserDivision || asset.user_division} />
+            <DetailRow label="Group" value={asset.GROUP || asset.group_name} />
+            <DetailRow label="Area" value={asset.AREA || asset.area} />
+            <DetailRow label="Location" value={asset.LOCATION || asset.location} />
+          </div>
+          <div>
+            <DetailRow label="Warranty" value={asset.warranty} />
+            {(asset.fmsExpiryDate || asset.warrantyExpiry) && (
+              <DetailRow label="Expiry Date" value={asset.fmsExpiryDate || asset.warrantyExpiry} />
+            )}
+          </div>
+          {asset.configuration && (
+            <div style={{ gridColumn: '1 / -1', marginTop: '0.3rem' }}>
+              <DetailRow label="Configuration" value={asset.configuration} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
