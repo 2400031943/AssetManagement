@@ -178,7 +178,7 @@ function AcmsCard({ asset, onEdit }) {
           flexShrink: 0,
         }}
       >
-        <Pencil size={13} /> Edit
+        <Pencil size={13} /> Add
       </button>
     </div>
   );
