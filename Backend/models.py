@@ -105,8 +105,9 @@ class Asset(db.Model):
 
 
 class AcmsList2027(db.Model):
-    """Mirror of Asset — written to ACMS_list_2027 table on every save/update."""
+    """Mirror of Asset — written to dbo.ACMS_list_2027 table on every save/update."""
     __tablename__ = 'ACMS_list_2027'
+    __table_args__ = {'schema': 'dbo'}
 
     id                   = db.Column(db.Integer, primary_key=True)
 
