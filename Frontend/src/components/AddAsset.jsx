@@ -658,8 +658,8 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
         </div>
       )}
 
-      {/* ── Form ────────────────────────────────────────────────────────── */}
-      {activeTabMode === 'add-asset' && (formMode || true) && (
+      {/* ── Form — only visible when formMode is set ('add' or 'edit') ──── */}
+      {activeTabMode === 'add-asset' && formMode && (
         <div ref={formRef}>
           {/* Form mode header */}
           <div style={{
