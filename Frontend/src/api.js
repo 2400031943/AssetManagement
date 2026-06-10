@@ -170,6 +170,21 @@ export async function getMyAcms2027Assets() {
 }
 
 /**
+ * Check whether a serial number exists in dbo.ACMS_list_2026 and/or dbo.ACMS_list_2027.
+ * Returns { in_2026: bool|null, in_2027: bool|null }
+ * null means the table could not be reached.
+ */
+export async function checkSerialInLists(serialNumber) {
+  if (!serialNumber) return { in_2026: null, in_2027: null };
+  if (USE_MOCK) {
+    await delay(300);
+    // Mock: pretend not in either list
+    return { in_2026: false, in_2027: false };
+  }
+  return apiFetch(`/assets/check-in-lists?serial_number=${encodeURIComponent(serialNumber)}`);
+}
+
+/**
  * Fetch asset recommendations from the remote cowmis database (ACMS$ / FMS$ tables).
  * These are shown on the Add Asset page so the user can quickly pre-fill the form.
  */

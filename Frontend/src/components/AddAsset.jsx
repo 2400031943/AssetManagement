@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard, ListChecks } from 'lucide-react';
-import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets } from '../api';
+import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard, ListChecks, ClipboardList, ShieldCheck, PlusCircle as PlusCircleIcon } from 'lucide-react';
+import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets, checkSerialInLists } from '../api';
 import '../pages/Dashboard.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,22 +17,77 @@ function recommendationToForm(rec) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Recommendation Card — ASSETNO + EQSRLNO side-by-side, EQPTDESCP collapsible
+// Three action buttons in top-right corner:
+//   1. Check 2026 List  2. Check 2027 List  3. Request to Add (placeholder)
 // ─────────────────────────────────────────────────────────────────────────────
 const DESC_LIMIT = 120;
 
+// Status values for each check button: null | 'loading' | true | false | 'error'
+function ListCheckBtn({ label, year, color, serialNumber }) {
+  const [status, setStatus] = React.useState(null); // null=idle loading=loading true/false=result 'error'=error
+
+  const handleClick = async (e) => {
+    e.stopPropagation();
+    if (status === 'loading') return;
+    setStatus('loading');
+    try {
+      const res = await checkSerialInLists(serialNumber);
+      const val = year === 2026 ? res.in_2026 : res.in_2027;
+      setStatus(val === null ? 'error' : val);
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  // Style varies by status
+  let bg, textColor, border, btnLabel;
+  if (status === null) {
+    bg = 'rgba(255,255,255,0.06)'; textColor = color; border = `1px solid ${color}40`;
+    btnLabel = label;
+  } else if (status === 'loading') {
+    bg = 'rgba(255,255,255,0.05)'; textColor = color; border = `1px solid ${color}40`;
+    btnLabel = '…';
+  } else if (status === true) {
+    bg = 'rgba(34,197,94,0.12)'; textColor = '#22c55e'; border = '1px solid rgba(34,197,94,0.35)';
+    btnLabel = `✓ In ${year} List`;
+  } else if (status === false) {
+    bg = 'rgba(239,68,68,0.1)'; textColor = '#ef4444'; border = '1px solid rgba(239,68,68,0.3)';
+    btnLabel = `✗ Not in ${year}`;
+  } else {
+    bg = 'rgba(251,191,36,0.1)'; textColor = '#f59e0b'; border = '1px solid rgba(251,191,36,0.3)';
+    btnLabel = 'Unavailable';
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title={`Check if serial number is in ACMS_list_${year}`}
+      style={{
+        background: bg, color: textColor, border, borderRadius: '6px',
+        padding: '3px 9px', fontSize: '0.68rem', fontWeight: 700,
+        cursor: status === 'loading' ? 'wait' : 'pointer',
+        transition: 'all 0.2s', whiteSpace: 'nowrap', letterSpacing: '0.02em',
+        display: 'flex', alignItems: 'center', gap: '4px',
+      }}
+    >
+      {status === 'loading' ? <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+      {btnLabel}
+    </button>
+  );
+}
+
 function RecommendationCard({ rec, isSelected, onClick }) {
   const [expanded, setExpanded] = React.useState(false);
+  const [requested, setRequested] = React.useState(false);
   const desc        = rec.configuration || '';
   const isLong      = desc.length > DESC_LIMIT;
   const displayDesc = expanded || !isLong ? desc : desc.slice(0, DESC_LIMIT) + '…';
 
   return (
-    <button
-      type="button"
-      onClick={() => onClick(rec)}
+    <div
       style={{
         width: '100%',
-        textAlign: 'left',
         background: isSelected
           ? 'linear-gradient(135deg, rgba(108,99,255,0.18), rgba(108,99,255,0.08))'
           : 'rgba(255,255,255,0.03)',
@@ -41,59 +96,107 @@ function RecommendationCard({ rec, isSelected, onClick }) {
           : '1.5px solid rgba(255,255,255,0.1)',
         borderRadius: '12px',
         padding: '0.75rem 1rem',
-        cursor: 'pointer',
         transition: 'all 0.2s ease',
         marginBottom: '0.6rem',
       }}
     >
-      {/* Header: COINS badge + checkmark */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-        <span style={{
-          fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.05em',
-          background: 'var(--accent-primary, #6c63ff)', color: '#fff',
-          padding: '2px 8px', borderRadius: '20px',
-        }}>COINS</span>
-        {isSelected && <CheckCircle2 size={15} style={{ color: 'var(--accent-primary, #6c63ff)' }} />}
+      {/* ── Top row: COINS badge  +  three action buttons ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+        {/* Left: COINS badge + selected check */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span style={{
+            fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.05em',
+            background: 'var(--accent-primary, #6c63ff)', color: '#fff',
+            padding: '2px 8px', borderRadius: '20px',
+          }}>COINS</span>
+          {isSelected && <CheckCircle2 size={15} style={{ color: 'var(--accent-primary, #6c63ff)' }} />}
+        </div>
+
+        {/* Right: three action buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+          {/* 1. Check 2026 List */}
+          <ListCheckBtn
+            label="2026 List?"
+            year={2026}
+            color="#60a5fa"
+            serialNumber={rec.serialNumber}
+          />
+          {/* 2. Check 2027 List */}
+          <ListCheckBtn
+            label="2027 List?"
+            year={2027}
+            color="#a78bfa"
+            serialNumber={rec.serialNumber}
+          />
+          {/* 3. Request to add — placeholder */}
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); setRequested(true); }}
+            title="Request to add into My ACMS list (coming soon)"
+            style={{
+              background: requested ? 'rgba(34,197,94,0.12)' : 'rgba(251,191,36,0.08)',
+              color: requested ? '#22c55e' : '#f59e0b',
+              border: requested ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(251,191,36,0.3)',
+              borderRadius: '6px', padding: '3px 9px',
+              fontSize: '0.68rem', fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.2s',
+              whiteSpace: 'nowrap', letterSpacing: '0.02em',
+            }}
+          >
+            {requested ? '✓ Requested' : '+ Request Add'}
+          </button>
+        </div>
       </div>
 
-      {/* Asset No + Serial No — side by side */}
-      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: desc ? '0.4rem' : 0 }}>
-        {rec.assetNumber && (
+      {/* Clickable body — pre-fills form */}
+      <button
+        type="button"
+        onClick={() => onClick(rec)}
+        style={{
+          width: '100%', textAlign: 'left',
+          background: 'none', border: 'none', padding: 0,
+          cursor: 'pointer',
+        }}
+      >
+        {/* Asset No + Serial No — side by side */}
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: desc ? '0.4rem' : 0 }}>
+          {rec.assetNumber && (
+            <div style={{ fontSize: '0.8rem' }}>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Asset No: </span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{rec.assetNumber}</span>
+            </div>
+          )}
           <div style={{ fontSize: '0.8rem' }}>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Asset No: </span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{rec.assetNumber}</span>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Serial No: </span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{rec.serialNumber || '—'}</span>
+          </div>
+        </div>
+
+        {/* EQPTDESCP — collapsible */}
+        {desc && (
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #a0aec0)', lineHeight: 1.5 }}>
+            <strong style={{ color: 'var(--text-muted)' }}>EQPTDESCP: </strong>
+            <span style={{ wordBreak: 'break-word' }}>{displayDesc}</span>
+            {isLong && (
+              <span
+                onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+                style={{
+                  marginLeft: '0.3rem', color: 'var(--accent-primary, #6c63ff)',
+                  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                {expanded ? ' show less ▲' : ' show more ▼'}
+              </span>
+            )}
           </div>
         )}
-        <div style={{ fontSize: '0.8rem' }}>
-          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Serial No: </span>
-          <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{rec.serialNumber || '—'}</span>
-        </div>
-      </div>
 
-      {/* EQPTDESCP — collapsible */}
-      {desc && (
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #a0aec0)', lineHeight: 1.5 }}>
-          <strong style={{ color: 'var(--text-muted)' }}>EQPTDESCP: </strong>
-          <span style={{ wordBreak: 'break-word' }}>{displayDesc}</span>
-          {isLong && (
-            <span
-              onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
-              style={{
-                marginLeft: '0.3rem', color: 'var(--accent-primary, #6c63ff)',
-                fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-              }}
-            >
-              {expanded ? ' show less ▲' : ' show more ▼'}
-            </span>
-          )}
+        {/* CTA */}
+        <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--accent-primary, #6c63ff)', fontWeight: 600 }}>
+          {isSelected ? '✓ Selected — Asset No., Serial No. & Configuration pre-filled' : 'Click to pre-fill Asset No., Serial No. & Configuration →'}
         </div>
-      )}
-
-      {/* CTA */}
-      <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--accent-primary, #6c63ff)', fontWeight: 600 }}>
-        {isSelected ? '✓ Selected — Asset No., Serial No. & Configuration pre-filled' : 'Click to pre-fill Asset No., Serial No. & Configuration →'}
-      </div>
-    </button>
+      </button>
+    </div>
   );
 }
 

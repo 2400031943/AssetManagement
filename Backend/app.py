@@ -500,6 +500,50 @@ def create_app(config_class=Config):
             return jsonify([]), 200
 
 
+    @app.route('/api/assets/check-in-lists', methods=['GET'])
+    @jwt_required()
+    def check_serial_in_lists():
+        """
+        Check whether a given serial_number exists in
+          dbo.ACMS_list_2026  (raw SQL — no model required)
+          dbo.ACMS_list_2027  (via AcmsList2027 model)
+        Returns:
+          { "in_2026": true/false/null, "in_2027": true/false/null }
+          null = table unreachable on this machine
+        """
+        serial_number = (request.args.get('serial_number') or '').strip()
+        if not serial_number:
+            return jsonify({'in_2026': None, 'in_2027': None}), 400
+
+        # ── Check dbo.ACMS_list_2026 via raw SQL ─────────────────────────
+        in_2026 = None
+        try:
+            count_2026 = db.session.execute(
+                text(
+                    "SELECT COUNT(*) FROM dbo.ACMS_list_2026 "
+                    "WHERE serial_number = :sn"
+                ),
+                {'sn': serial_number}
+            ).scalar()
+            in_2026 = (count_2026 or 0) > 0
+        except Exception as e:
+            print(f"[CHECK-2026] Could not query dbo.ACMS_list_2026: {e}")
+            in_2026 = None
+
+        # ── Check dbo.ACMS_list_2027 via model ───────────────────────────
+        in_2027 = None
+        try:
+            count_2027 = AcmsList2027.query.filter(
+                AcmsList2027.serial_number == serial_number
+            ).count()
+            in_2027 = count_2027 > 0
+        except Exception as e:
+            print(f"[CHECK-2027] Could not query dbo.ACMS_list_2027: {e}")
+            in_2027 = None
+
+        return jsonify({'in_2026': in_2026, 'in_2027': in_2027}), 200
+
+
     @app.route('/api/admin/import-assets', methods=['POST'])
     def import_assets_from_acms_fms():
         """
