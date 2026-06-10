@@ -439,219 +439,227 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
       {/* Page header */}
       <div className="section-header" style={{ marginBottom: '1.5rem' }}>
         <div>
-          <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>Add System to ACMS List</h2>
+          <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>
+            {activeTabMode === 'coins-recommendations' ? 'COINS Recommendations' : 'Add System to ACMS List'}
+          </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Browse <strong>COINS</strong> or your <strong>Current ACMS List</strong> below. Click a card to open the form.
+            {activeTabMode === 'coins-recommendations'
+              ? 'Browse recommendations from COINS. Click a card to pre-fill the Add Asset form.'
+              : 'Browse your Recommendations from 2026 ACMS List or complete the form below.'}
           </p>
         </div>
       </div>
 
       {/* ── Recommendations Cards Panel ─────────────────────────────────────── */}
-      <div className="rec-panel glass-panel" style={{ marginBottom: '2rem' }}>
-        <div className="rec-panel-header">
-          <div className="rec-panel-title">
-            <Database size={18} className="rec-panel-db-icon" />
-            <span>Recommendations from COINS</span>
-            <span className="rec-panel-subtitle">ASSETNO · EQSRLNO · EQPTDESCP</span>
+      {activeTabMode === 'coins-recommendations' && (
+        <div className="rec-panel glass-panel" style={{ marginBottom: '2rem' }}>
+          <div className="rec-panel-header">
+            <div className="rec-panel-title">
+              <Database size={18} className="rec-panel-db-icon" />
+              <span>Recommendations from COINS</span>
+              <span className="rec-panel-subtitle">ASSETNO · EQSRLNO · EQPTDESCP</span>
+            </div>
+            <Sparkles size={16} style={{ color: 'var(--accent-primary)', opacity: 0.7 }} />
           </div>
-          <Sparkles size={16} style={{ color: 'var(--accent-primary)', opacity: 0.7 }} />
-        </div>
 
-        {/* Loading */}
-        {recLoading && (
-          <div className="rec-loading">
-            <Loader2 size={20} className="rec-spinner" />
-            <span>Fetching your assets from COINS database…</span>
-          </div>
-        )}
+          {/* Loading */}
+          {recLoading && (
+            <div className="rec-loading">
+              <Loader2 size={20} className="rec-spinner" />
+              <span>Fetching your assets from COINS database…</span>
+            </div>
+          )}
 
-        {/* Error */}
-        {!recLoading && recError && (
-          <div className="rec-error">
-            <ServerCrash size={18} />
-            <span>Could not reach the COINS database. You can still fill the form manually.</span>
-          </div>
-        )}
+          {/* Error */}
+          {!recLoading && recError && (
+            <div className="rec-error">
+              <ServerCrash size={18} />
+              <span>Could not reach the COINS database. You can still fill the form manually.</span>
+            </div>
+          )}
 
-        {/* Empty — no MY assets found, but search still available */}
-        {!recLoading && !recError && myRecs.length === 0 && !searchQ.trim() && (
-          <div className="rec-empty">
-            No assets found for your employee code in COINS.
-            Use the search bar below to find an asset by serial number.
-          </div>
-        )}
+          {/* Empty — no MY assets found, but search still available */}
+          {!recLoading && !recError && myRecs.length === 0 && !searchQ.trim() && (
+            <div className="rec-empty">
+              No assets found for your employee code in COINS.
+              Use the search bar below to find an asset by serial number.
+            </div>
+          )}
 
-        {/* Search bar + Cards — always visible once loaded */}
-        {!recLoading && !recError && (
-          <div style={{ padding: '0 1rem 1rem' }}>
+          {/* Search bar + Cards — always visible once loaded */}
+          {!recLoading && !recError && (
+            <div style={{ padding: '0 1rem 1rem' }}>
 
-            {/* ── Search bar ── */}
-            <div style={{ position: 'relative', marginBottom: '1rem' }}>
-              <Search size={15} style={{
-                position: 'absolute', left: '0.75rem', top: '50%',
-                transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none',
-              }} />
-              <input
-                type="text"
-                value={searchQ}
-                onChange={e => { setSearchQ(e.target.value); setSelectedRecId(null); }}
-                placeholder="Search by Serial Number (EQSRLNO)…"
-                className="login-input"
-                style={{ paddingLeft: '2.2rem', paddingRight: '2.2rem', width: '100%' }}
-              />
-              {searchQ && (
-                <button
-                  type="button"
-                  onClick={() => { setSearchQ(''); setSearchResults([]); setSelectedRecId(null); }}
-                  style={{
-                    position: 'absolute', right: '0.75rem', top: '50%',
-                    transform: 'translateY(-50%)', background: 'none',
-                    border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0,
-                  }}
-                ><X size={15} /></button>
+              {/* ── Search bar ── */}
+              <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                <Search size={15} style={{
+                  position: 'absolute', left: '0.75rem', top: '50%',
+                  transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none',
+                }} />
+                <input
+                  type="text"
+                  value={searchQ}
+                  onChange={e => { setSearchQ(e.target.value); setSelectedRecId(null); }}
+                  placeholder="Search by Serial Number (EQSRLNO)…"
+                  className="login-input"
+                  style={{ paddingLeft: '2.2rem', paddingRight: '2.2rem', width: '100%' }}
+                />
+                {searchQ && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQ(''); setSearchResults([]); setSelectedRecId(null); }}
+                    style={{
+                      position: 'absolute', right: '0.75rem', top: '50%',
+                      transform: 'translateY(-50%)', background: 'none',
+                      border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0,
+                    }}
+                  ><X size={15} /></button>
+                )}
+              </div>
+
+              {/* Label */}
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                {searchQ.trim()
+                  ? searching
+                    ? 'Searching COINS…'
+                    : `${recommendations.length} result(s) for "${searchQ}"`
+                  : 'Your assets from COINS — click a card to open the Add form.'}
+              </p>
+
+              {/* Searching spinner */}
+              {searching && (
+                <div className="rec-loading" style={{ padding: '0.5rem 0' }}>
+                  <Loader2 size={16} className="rec-spinner" />
+                  <span>Searching COINS…</span>
+                </div>
+              )}
+
+              {/* No search results */}
+              {!searching && searchQ.trim() && recommendations.length === 0 && (
+                <div className="rec-empty">No assets found matching "{searchQ}" in COINS.</div>
+              )}
+
+              {/* Cards — paginated */}
+              {!searching && pagedRecs.map(rec => (
+                <RecommendationCard
+                  key={rec.id}
+                  rec={rec}
+                  isSelected={selectedRecId === rec.id}
+                  onClick={handleCardClick}
+                />
+              ))}
+
+              {/* Pagination controls */}
+              {!searching && totalPages > 1 && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  marginTop: '0.75rem', padding: '0.6rem 0.2rem',
+                  borderTop: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.3rem',
+                      background: currentPage === 1 ? 'rgba(255,255,255,0.04)' : 'var(--accent-primary, #6c63ff)',
+                      color: currentPage === 1 ? 'var(--text-muted)' : '#fff',
+                      border: 'none', borderRadius: '8px',
+                      padding: '0.45rem 1rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
+                      opacity: currentPage === 1 ? 0.45 : 1,
+                    }}
+                  >
+                    &#8592; Prev
+                  </button>
+
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    Page <strong style={{ color: 'var(--text-primary, #fff)' }}>{currentPage}</strong> of{' '}
+                    <strong style={{ color: 'var(--text-primary, #fff)' }}>{totalPages}</strong>
+                    <span style={{ marginLeft: '0.5rem', opacity: 0.6 }}>({recommendations.length} total)</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.3rem',
+                      background: currentPage === totalPages ? 'rgba(255,255,255,0.04)' : 'var(--accent-primary, #6c63ff)',
+                      color: currentPage === totalPages ? 'var(--text-muted)' : '#fff',
+                      border: 'none', borderRadius: '8px',
+                      padding: '0.45rem 1rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
+                      opacity: currentPage === totalPages ? 0.45 : 1,
+                    }}
+                  >
+                    Next &#8594;
+                  </button>
+                </div>
               )}
             </div>
-
-            {/* Label */}
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              {searchQ.trim()
-                ? searching
-                  ? 'Searching COINS…'
-                  : `${recommendations.length} result(s) for "${searchQ}"`
-                : 'Your assets from COINS — click a card to open the Add form.'}
-            </p>
-
-            {/* Searching spinner */}
-            {searching && (
-              <div className="rec-loading" style={{ padding: '0.5rem 0' }}>
-                <Loader2 size={16} className="rec-spinner" />
-                <span>Searching COINS…</span>
-              </div>
-            )}
-
-            {/* No search results */}
-            {!searching && searchQ.trim() && recommendations.length === 0 && (
-              <div className="rec-empty">No assets found matching "{searchQ}" in COINS.</div>
-            )}
-
-            {/* Cards — paginated */}
-            {!searching && pagedRecs.map(rec => (
-              <RecommendationCard
-                key={rec.id}
-                rec={rec}
-                isSelected={selectedRecId === rec.id}
-                onClick={handleCardClick}
-              />
-            ))}
-
-            {/* Pagination controls */}
-            {!searching && totalPages > 1 && (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginTop: '0.75rem', padding: '0.6rem 0.2rem',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.3rem',
-                    background: currentPage === 1 ? 'rgba(255,255,255,0.04)' : 'var(--accent-primary, #6c63ff)',
-                    color: currentPage === 1 ? 'var(--text-muted)' : '#fff',
-                    border: 'none', borderRadius: '8px',
-                    padding: '0.45rem 1rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
-                    opacity: currentPage === 1 ? 0.45 : 1,
-                  }}
-                >
-                  &#8592; Prev
-                </button>
-
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  Page <strong style={{ color: 'var(--text-primary, #fff)' }}>{currentPage}</strong> of{' '}
-                  <strong style={{ color: 'var(--text-primary, #fff)' }}>{totalPages}</strong>
-                  <span style={{ marginLeft: '0.5rem', opacity: 0.6 }}>({recommendations.length} total)</span>
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.3rem',
-                    background: currentPage === totalPages ? 'rgba(255,255,255,0.04)' : 'var(--accent-primary, #6c63ff)',
-                    color: currentPage === totalPages ? 'var(--text-muted)' : '#fff',
-                    border: 'none', borderRadius: '8px',
-                    padding: '0.45rem 1rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
-                    opacity: currentPage === totalPages ? 0.45 : 1,
-                  }}
-                >
-                  Next &#8594;
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>{/* /COINS panel */}
+          )}
+        </div>
+      )}
 
       {/* ── Recommendations from Current ACMS List ────────────────────── */}
-      <div className="rec-panel glass-panel" style={{ marginBottom: '2rem' }}>
-        <div className="rec-panel-header">
-          <div className="rec-panel-title">
-            <LayoutDashboard size={18} className="rec-panel-db-icon" />
-            <span>Recommendations from 2026 ACMS List</span>
-            <span className="rec-panel-subtitle">Sorted by Category</span>
-          </div>
-        </div>
-
-        {acmsLoading && (
-          <div className="rec-loading">
-            <Loader2 size={20} className="rec-spinner" />
-            <span>Loading your ACMS systems…</span>
-          </div>
-        )}
-
-        {!acmsLoading && acmsAssets.length === 0 && (
-          <div className="rec-empty">No assets in your ACMS list yet. Add one using the form below.</div>
-        )}
-
-        {!acmsLoading && acmsAssets.length > 0 && (() => {
-          // Group by category, sorted alphabetically
-          const groups = acmsAssets.reduce((acc, asset) => {
-            const cat = asset.CATEGORY || asset.category || 'Uncategorized';
-            if (!acc[cat]) acc[cat] = [];
-            acc[cat].push(asset);
-            return acc;
-          }, {});
-          return (
-            <div style={{ padding: '0 1rem 1rem' }}>
-              {Object.entries(groups)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([cat, items]) => (
-                  <div key={cat} style={{ marginBottom: '1rem' }}>
-                    {/* Category header */}
-                    <div style={{
-                      fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
-                      color: 'var(--accent-primary, #6c63ff)', textTransform: 'uppercase',
-                      padding: '0.35rem 0', marginBottom: '0.5rem',
-                      borderBottom: '1px solid rgba(108,99,255,0.2)',
-                    }}>
-                      {cat} &nbsp;<span style={{ opacity: 0.55, fontWeight: 500 }}>({items.length})</span>
-                    </div>
-                    {items.map(asset => (
-                      <AcmsCard key={asset.id} asset={asset} onEdit={handleEditClick} />
-                    ))}
-                  </div>
-                ))}
+      {activeTabMode === 'add-asset' && (
+        <div className="rec-panel glass-panel" style={{ marginBottom: '2rem' }}>
+          <div className="rec-panel-header">
+            <div className="rec-panel-title">
+              <LayoutDashboard size={18} className="rec-panel-db-icon" />
+              <span>Recommendations from 2026 ACMS List</span>
+              <span className="rec-panel-subtitle">Sorted by Category</span>
             </div>
-          );
-        })()}
-      </div>{/* /ACMS panel */}
+          </div>
 
-      {/* ── Form — appears only when formMode is set ────────────────────── */}
-      {formMode && (
+          {acmsLoading && (
+            <div className="rec-loading">
+              <Loader2 size={20} className="rec-spinner" />
+              <span>Loading your ACMS systems…</span>
+            </div>
+          )}
+
+          {!acmsLoading && acmsAssets.length === 0 && (
+            <div className="rec-empty">No assets in your ACMS list yet. Add one using the form below.</div>
+          )}
+
+          {!acmsLoading && acmsAssets.length > 0 && (() => {
+            // Group by category, sorted alphabetically
+            const groups = acmsAssets.reduce((acc, asset) => {
+              const cat = asset.CATEGORY || asset.category || 'Uncategorized';
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(asset);
+              return acc;
+            }, {});
+            return (
+              <div style={{ padding: '0 1rem 1rem' }}>
+                {Object.entries(groups)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([cat, items]) => (
+                    <div key={cat} style={{ marginBottom: '1rem' }}>
+                      {/* Category header */}
+                      <div style={{
+                        fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
+                        color: 'var(--accent-primary, #6c63ff)', textTransform: 'uppercase',
+                        padding: '0.35rem 0', marginBottom: '0.5rem',
+                        borderBottom: '1px solid rgba(108,99,255,0.2)',
+                      }}>
+                        {cat} &nbsp;<span style={{ opacity: 0.55, fontWeight: 500 }}>({items.length})</span>
+                      </div>
+                      {items.map(asset => (
+                        <AcmsCard key={asset.id} asset={asset} onEdit={handleEditClick} />
+                      ))}
+                    </div>
+                  ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ── Form ────────────────────────────────────────────────────────── */}
+      {activeTabMode === 'add-asset' && (formMode || true) && (
         <div ref={formRef}>
           {/* Form mode header */}
           <div style={{

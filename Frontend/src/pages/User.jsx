@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LogOut, Database, LayoutDashboard, PlusCircle, RefreshCw } from 'lucide-react';
+import { LogOut, Database, LayoutDashboard, PlusCircle, RefreshCw, Sparkles } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getMyAssets, createAsset, updateAsset } from '../api';
 import { getStoredSession, clearStoredSession } from '../authSession';
@@ -116,6 +116,12 @@ export default function User() {
           >
             <PlusCircle size={20} /><span>Add System to ACMS List</span>
           </button>
+          <button
+            className={`nav-item ${activeTab === 'coins-recommendations' ? 'active' : ''}`}
+            onClick={() => handleTabChange('coins-recommendations')}
+          >
+            <Sparkles size={20} /><span>COINS Recommendations</span>
+          </button>
         </nav>
 
         {/* Employee code badge */}
@@ -153,7 +159,15 @@ export default function User() {
             onRefresh={fetchMyAssets}
           />
         )}
-        {activeTab === 'add-asset' && <AddAsset onAddAsset={handleAddAsset} onUpdateAsset={handleUpdateAsset} onSuccess={switchToMyAssets} />}
+        {(activeTab === 'add-asset' || activeTab === 'coins-recommendations') && (
+          <AddAsset
+            onAddAsset={handleAddAsset}
+            onUpdateAsset={handleUpdateAsset}
+            onSuccess={switchToMyAssets}
+            activeTabMode={activeTab}
+            setActiveTab={setActiveTab}
+          />
+        )}
       </main>
     </div>
   );
