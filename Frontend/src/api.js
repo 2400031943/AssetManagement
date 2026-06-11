@@ -286,42 +286,60 @@ export async function deleteAsset(assetId) {
 // APPROVAL PENDING WORKFLOW
 // ---------------------------------------------------------------------------
 
-/** Fetch the list of available approvers (for the dropdown when submitting a request). */
+/** Fetch the list of available approvers. */
 export async function getApprovers() {
   if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/approvers');
 }
 
-/** Fetch the list of available registrars (for the dropdown when submitting a request). */
+/** Fetch the list of available registrars. */
 export async function getRegistrars() {
   if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/registrars');
 }
 
-/** Fetch the list of available Deputy Directors (for the dropdown). */
+/** Fetch the list of available Deputy Directors. */
 export async function getDDs() {
   if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/dds');
 }
 
-/** Fetch the list of available Admins (for the dropdown). */
+/** Fetch the list of available Admins. */
 export async function getAdmins() {
   if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/admins');
 }
 
-/**
- * Submit a new request to add a system to the ACMS list.
- * Sends all asset fields plus approver and DD selections.
- */
+/** Save a single asset as a Draft pending request (no approver selected yet). */
 export async function requestAssetAdd(data) {
   if (USE_MOCK) {
     await delay(500);
-    return { message: 'Request submitted (mock)', id: Math.floor(Math.random() * 1000) };
+    return { message: 'Saved as draft (mock)', id: Math.floor(Math.random() * 1000) };
   }
   return apiFetch('/assets/request-add', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+/** Get all Draft pending requests for the logged-in user. */
+export async function getDraftRequests() {
+  if (USE_MOCK) { await delay(400); return []; }
+  return apiFetch('/assets/pending-requests/drafts');
+}
+
+/**
+ * Submit selected drafts for approval with chosen Approver, Registrar and DD.
+ * draftIds: number[], approverEcno/Name, registrarEcno/Name, ddEcno/Name, ...designations
+ */
+export async function submitPendingRequests(payload) {
+  if (USE_MOCK) {
+    await delay(600);
+    return { message: 'Submitted (mock)', submitted: payload.draftIds?.length || 0, errors: [] };
+  }
+  return apiFetch('/assets/pending-requests/submit', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }
 
@@ -334,9 +352,28 @@ export async function getPendingRequests(includeWithdrawn = false) {
 
 /** Withdraw a specific pending request by its ID. */
 export async function withdrawPendingRequest(requestId) {
-  if (USE_MOCK) {
-    await delay(300);
-    return { message: 'Withdrawn (mock)' };
-  }
+  if (USE_MOCK) { await delay(300); return { message: 'Withdrawn (mock)' }; }
   return apiFetch(`/assets/pending-requests/${requestId}/withdraw`, { method: 'POST' });
+}
+
+/** Get requests currently awaiting MY approval action. */
+export async function getAssignedApprovals() {
+  if (USE_MOCK) { await delay(400); return []; }
+  return apiFetch('/assets/assigned-to-me');
+}
+
+/**
+ * Approve or reject a pending request.
+ * action: 'approve' | 'reject'
+ * remarks: optional string
+ */
+export async function approveOrRejectRequest(requestId, action, remarks = '') {
+  if (USE_MOCK) {
+    await delay(500);
+    return { message: `${action}d (mock)`, status: action === 'approve' ? 'Approved' : 'Rejected' };
+  }
+  return apiFetch(`/assets/pending-requests/${requestId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ action, remarks }),
+  });
 }

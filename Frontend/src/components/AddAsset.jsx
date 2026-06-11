@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard, ListChecks } from 'lucide-react';
-import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets, checkSerialInLists } from '../api';
+import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard, ListChecks, Send, ChevronDown, Trash2 } from 'lucide-react';
+import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets, checkSerialInLists, requestAssetAdd, getDraftRequests, submitPendingRequests, getApprovers, getRegistrars, getDDs } from '../api';
 import '../pages/Dashboard.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -407,7 +407,22 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
   const [recLoading, setRecLoading]       = useState(true);
   const [recError, setRecError]           = useState(false);
 
-  // ── ACMS list (local DB — user's existing assets from dbo.assets)
+  // ── Draft requests (Ready to Send section)
+  const [drafts, setDrafts]               = useState([]);
+  const [draftsLoading, setDraftsLoading] = useState(false);
+  const [selectedDraftIds, setSelectedDraftIds] = useState(new Set());
+
+  // ── Approval dropdowns
+  const [approversList, setApproversList] = useState([]);
+  const [registrarsList, setRegistrarsList] = useState([]);
+  const [ddsList, setDdsList]             = useState([]);
+  const [dropdownsLoading, setDropdownsLoading] = useState(false);
+  const [selectedApprover, setSelectedApprover] = useState(null);
+  const [selectedRegistrar, setSelectedRegistrar] = useState(null);
+  const [selectedDD, setSelectedDD]       = useState(null);
+  const [sendingForApproval, setSendingForApproval] = useState(false);
+  const [sendResult, setSendResult]       = useState(null); // {success, message}
+
   const [acmsAssets, setAcmsAssets]       = useState([]);
   const [acmsLoading, setAcmsLoading]     = useState(true);
 
@@ -538,6 +553,30 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
   };
 
   // ── Form submit: Add (POST) or Edit (PUT)
+  // ── Fetch drafts
+  const fetchDrafts = () => {
+    setDraftsLoading(true);
+    getDraftRequests()
+      .then(data => setDrafts(Array.isArray(data) ? data : []))
+      .catch(() => setDrafts([]))
+      .finally(() => setDraftsLoading(false));
+  };
+
+  // ── Load dropdowns once (on mount)
+  useEffect(() => {
+    setDropdownsLoading(true);
+    Promise.all([getApprovers(), getRegistrars(), getDDs()])
+      .then(([a, r, d]) => {
+        setApproversList(Array.isArray(a) ? a : []);
+        setRegistrarsList(Array.isArray(r) ? r : []);
+        setDdsList(Array.isArray(d) ? d : []);
+      })
+      .catch(() => {})
+      .finally(() => setDropdownsLoading(false));
+  }, []);
+
+  useEffect(() => { fetchDrafts(); }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus({ type: 'loading', message: formMode === 'edit' ? 'Updating asset…' : 'Saving asset…' });
@@ -572,20 +611,83 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
           setFormData(EMPTY_FORM);
         }, 2000);
       } else {
-        // — ADD new asset
-        await onAddAsset(payload);
+        // — SAVE AS DRAFT in pending_requests —
+        const draftPayload = {
+          assetNumber:       payload.assetNumber        || '',
+          serialNumber:      payload.serialNumber       || '',
+          category:          payload.CATEGORY           || '',
+          make:              payload.make               || '',
+          model:             payload.model              || '',
+          configuration:     payload.configuration      || '',
+          networkDomain:     payload.networkDomain      || '',
+          ipAddress:         payload.ipAddress          || '',
+          monitor:           payload.Monitor            || '',
+          assetCustodianEcno:payload.AssetCustodianECNO || '',
+          userDivision:      payload.UserDivision       || '',
+          group:             payload.GROUP              || '',
+          area:              payload.AREA               || '',
+          location:          payload.LOCATION           || '',
+          acmsFms:           payload.acmsFms            || '',
+          warranty:          payload.warranty           || 'No',
+          fmsExpiryDate:     payload.fmsExpiryDate      || '',
+        };
+        await requestAssetAdd(draftPayload);
         setFormData(EMPTY_FORM);
         setSelectedRecId(null);
         setSearchQ('');
         setSearchResults([]);
-        setSaved(true);
-        setTimeout(() => {
-          setSaved(false);
-          if (onSuccess) onSuccess();
-        }, 2500);
+        setFormMode(null);
+        setStatus({ type: 'success', message: '✓ Saved as draft! Go to “Ready to Send” section below to send for approval.' });
+        fetchDrafts();
+        setTimeout(() => setStatus({ type: null, message: '' }), 4000);
       }
     } catch (err) {
       setStatus({ type: 'error', message: err.message || 'Operation failed. Please try again.' });
+    }
+  };
+
+  // ── Toggle draft selection
+  const toggleDraft = (id) => {
+    setSelectedDraftIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  // ── Send selected drafts for approval
+  const handleSendForApproval = async () => {
+    if (!selectedApprover || !selectedRegistrar || !selectedDD) {
+      alert('Please select Approver, Registrar and DD before sending.');
+      return;
+    }
+    if (selectedDraftIds.size === 0) {
+      alert('Please select at least one request.');
+      return;
+    }
+    setSendingForApproval(true);
+    setSendResult(null);
+    try {
+      const res = await submitPendingRequests({
+        draftIds:             Array.from(selectedDraftIds),
+        approverEcno:         selectedApprover.ecno,
+        approverName:         selectedApprover.name,
+        approverDesignation:  selectedApprover.designation,
+        registrarEcno:        selectedRegistrar.ecno,
+        registrarName:        selectedRegistrar.name,
+        registrarDesignation: selectedRegistrar.designation,
+        ddEcno:               selectedDD.ecno,
+        ddName:               selectedDD.name,
+        ddDesignation:        selectedDD.designation,
+      });
+      setSendResult({ success: true, message: res.message || 'Sent for approval!' });
+      setSelectedDraftIds(new Set());
+      setSelectedApprover(null); setSelectedRegistrar(null); setSelectedDD(null);
+      fetchDrafts();
+    } catch (err) {
+      setSendResult({ success: false, message: err.message || 'Failed to send.' });
+    } finally {
+      setSendingForApproval(false);
     }
   };
 
@@ -1283,8 +1385,8 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
             <button type="submit" className="submit-btn login-btn" disabled={status.type === 'loading'}>
               <Save size={18} />
               <span>{status.type === 'loading'
-                ? (formMode === 'edit' ? 'Updating…' : 'Saving…')
-                : (formMode === 'edit' ? 'Update Asset' : 'Save to ACMS Systems Management')}
+                ? (formMode === 'edit' ? 'Updating…' : 'Saving Draft…')
+                : (formMode === 'edit' ? 'Update Asset' : 'Save as Draft')}
               </span>
             </button>
         </div>
@@ -1292,6 +1394,150 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
           </form>
         </div>
       )}{/* /formMode */}
+
+      {/* ══ READY TO SEND APPROVAL REQUEST SECTION ═══════════════════════════ */}
+      {activeTabMode === 'add-asset' && (
+        <div className="glass-panel" style={{ marginTop: '2rem', padding: '1.4rem' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <Send size={20} style={{ color: '#f59e0b' }} />
+              <h3 style={{ margin: 0, fontSize: '1rem', color: '#f59e0b', fontWeight: 700 }}>
+                Ready to Send Approval Request
+              </h3>
+              {drafts.length > 0 && (
+                <span style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', borderRadius: 20, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>
+                  {drafts.length}
+                </span>
+              )}
+            </div>
+            <button onClick={fetchDrafts} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 12px', color: 'var(--text-muted)', fontSize: '0.78rem', cursor: 'pointer' }}>↻ Refresh</button>
+          </div>
+
+          {/* Loading */}
+          {draftsLoading && <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', padding: '1rem 0' }}><Loader2 size={16} style={{ animation: 'spin 1s linear infinite', marginRight: 6 }} />Loading drafts…</div>}
+
+          {/* Empty */}
+          {!draftsLoading && drafts.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem', border: '1.5px dashed rgba(255,255,255,0.1)', borderRadius: 10 }}>
+              No drafts yet. Fill the form above and click <strong>Save as Draft</strong> to add systems here.
+            </div>
+          )}
+
+          {/* Send result banner */}
+          {sendResult && (
+            <div style={{ padding: '0.7rem 1rem', borderRadius: 8, marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600,
+              background: sendResult.success ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+              color: sendResult.success ? '#22c55e' : '#ef4444',
+              border: `1px solid ${sendResult.success ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+              {sendResult.success ? '✓ ' : '✗ '}{sendResult.message}
+            </div>
+          )}
+
+          {/* Draft cards */}
+          {!draftsLoading && drafts.length > 0 && (
+            <div>
+              {/* Select All */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <input type="checkbox"
+                  checked={selectedDraftIds.size === drafts.length && drafts.length > 0}
+                  onChange={e => setSelectedDraftIds(e.target.checked ? new Set(drafts.map(d => d.id)) : new Set())}
+                  style={{ accentColor: '#f59e0b', width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select All ({drafts.length})</span>
+                {selectedDraftIds.size > 0 && <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>{selectedDraftIds.size} selected</span>}
+              </div>
+
+              {drafts.map(d => (
+                <div key={d.id} onClick={() => toggleDraft(d.id)} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+                  background: selectedDraftIds.has(d.id) ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.03)',
+                  border: `1.5px solid ${selectedDraftIds.has(d.id) ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '0.6rem', cursor: 'pointer', transition: 'all 0.2s',
+                }}>
+                  <input type="checkbox" checked={selectedDraftIds.has(d.id)} onChange={() => toggleDraft(d.id)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ accentColor: '#f59e0b', width: 16, height: 16, cursor: 'pointer', marginTop: 3, flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.9rem', color: '#e2e8f0' }}>{d.assetNumber || d.serialNumber || `Draft #${d.id}`}</span>
+                      {d.serialNumber && d.assetNumber && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>· SN: {d.serialNumber}</span>}
+                      <span style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 20, padding: '1px 7px', fontSize: '0.65rem', fontWeight: 700 }}>Draft</span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {d.category && <span>📂 {d.category}</span>}
+                      {d.make && <span>🏭 {d.make} {d.model || ''}</span>}
+                      {d.area && <span>📍 {d.area}</span>}
+                      {d.userDivision && <span>🏢 {d.userDivision}</span>}
+                      {d.createdAt && <span>🕐 {new Date(d.createdAt).toLocaleDateString('en-IN')}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Approval panel — shown when ≥1 draft selected */}
+          {selectedDraftIds.size > 0 && (
+            <div style={{ marginTop: '1.2rem', padding: '1.2rem', background: 'rgba(108,99,255,0.06)', border: '1.5px solid rgba(108,99,255,0.2)', borderRadius: 12 }}>
+              <h4 style={{ margin: '0 0 1rem', color: '#a5b4fc', fontSize: '0.95rem', fontWeight: 700 }}>Select Approvers for {selectedDraftIds.size} request(s)</h4>
+
+              {dropdownsLoading && <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Loading personnel…</div>}
+
+              {!dropdownsLoading && [
+                { label: 'Approver', list: approversList, selected: selectedApprover, setter: setSelectedApprover },
+                { label: 'Registrar', list: registrarsList, selected: selectedRegistrar, setter: setSelectedRegistrar },
+                { label: 'Deputy Director (DD)', list: ddsList, selected: selectedDD, setter: setSelectedDD },
+              ].map(({ label, list, selected, setter }) => (
+                <div key={label} style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 600 }}>{label}</label>
+                  <select
+                    value={selected ? selected.ecno : ''}
+                    onChange={e => {
+                      const person = list.find(p => p.ecno === e.target.value);
+                      setter(person || null);
+                    }}
+                    style={{
+                      width: '100%', padding: '0.55rem 0.8rem',
+                      background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.15)',
+                      borderRadius: 8, color: '#e2e8f0', fontSize: '0.85rem', cursor: 'pointer',
+                    }}
+                  >
+                    <option value="">-- Select {label} --</option>
+                    {list.length === 0 && <option disabled>No personnel available (remote DB may be offline)</option>}
+                    {list.map(p => (
+                      <option key={p.ecno} value={p.ecno}>
+                        {p.name} — {p.designation} ({p.ecno})
+                      </option>
+                    ))}
+                  </select>
+                  {selected && (
+                    <div style={{ marginTop: '0.3rem', fontSize: '0.75rem', color: '#a5b4fc' }}>
+                      ✓ {selected.name} · {selected.designation} · {selected.ecno}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <button
+                onClick={handleSendForApproval}
+                disabled={sendingForApproval || !selectedApprover || !selectedRegistrar || !selectedDD}
+                style={{
+                  width: '100%', padding: '0.75rem',
+                  background: (!selectedApprover || !selectedRegistrar || !selectedDD) ? 'rgba(108,99,255,0.3)' : 'linear-gradient(135deg, #6c63ff, #a855f7)',
+                  color: '#fff', border: 'none', borderRadius: 8,
+                  fontSize: '0.95rem', fontWeight: 700, cursor: sendingForApproval ? 'wait' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  opacity: sendingForApproval ? 0.7 : 1,
+                }}
+              >
+                {sendingForApproval ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</> : <><Send size={16} /> Send {selectedDraftIds.size} Request(s) for Approval</>}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );

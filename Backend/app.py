@@ -563,14 +563,14 @@ def create_app(config_class=Config):
             acms_fms             = data.get('acmsFms'),
             warranty             = data.get('warranty', 'No'),
             fms_expiry_date      = None,  # set below if provided
-            status               = 'Submitted',
+            status               = 'Draft',
             current_level        = 1,
-            approver_ecno        = data.get('approverEcno'),
-            approver_name        = data.get('approverName'),
-            registrar_ecno       = data.get('registrarEcno'),
-            registrar_name       = data.get('registrarName'),
-            dd_ecno              = data.get('ddEcno'),
-            dd_name              = data.get('ddName'),
+            approver_ecno        = None,
+            approver_name        = None,
+            registrar_ecno       = None,
+            registrar_name       = None,
+            dd_ecno              = None,
+            dd_name              = None,
         )
 
         # Parse fms_expiry_date if warranty=Yes
@@ -583,7 +583,224 @@ def create_app(config_class=Config):
 
         db.session.add(pr)
         db.session.commit()
-        return jsonify({'message': 'Request submitted successfully.', 'id': pr.id}), 201
+        return jsonify({'message': 'Saved as draft.', 'id': pr.id}), 201
+
+    @app.route('/api/assets/pending-requests/drafts', methods=['GET'])
+    @jwt_required()
+    def get_draft_requests():
+        """Return all Draft pending requests for the logged-in user."""
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        employee_code   = (current_user.emp_code or '').strip().upper()
+        rows = PendingRequest.query.filter(
+            func.upper(func.ltrim(func.rtrim(PendingRequest.requester_ecno))) == employee_code,
+            PendingRequest.status == 'Draft'
+        ).order_by(PendingRequest.created_at.desc()).all()
+        return jsonify([r.to_dict() for r in rows]), 200
+
+    @app.route('/api/assets/pending-requests/submit', methods=['POST'])
+    @jwt_required()
+    def submit_pending_requests():
+        """
+        Submit selected Draft requests for approval.
+        Body: {
+          draftIds: [1, 2, 3],
+          approverEcno, approverName, approverDesignation,
+          registrarEcno, registrarName, registrarDesignation,
+          ddEcno, ddName, ddDesignation
+        }
+        """
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        employee_code   = (current_user.emp_code or '').strip().upper()
+        data            = request.get_json() or {}
+
+        draft_ids = data.get('draftIds', [])
+        if not draft_ids:
+            return jsonify({'error': 'No draft IDs provided.'}), 400
+
+        approver_ecno  = (data.get('approverEcno') or '').strip()
+        registrar_ecno = (data.get('registrarEcno') or '').strip()
+        dd_ecno        = (data.get('ddEcno') or '').strip()
+
+        if not approver_ecno or not registrar_ecno or not dd_ecno:
+            return jsonify({'error': 'Approver, Registrar and DD must all be selected.'}), 400
+
+        submitted_count = 0
+        errors = []
+        for draft_id in draft_ids:
+            pr = PendingRequest.query.get(draft_id)
+            if not pr:
+                errors.append(f'Request {draft_id} not found.')
+                continue
+            if pr.requester_ecno.strip().upper() != employee_code:
+                errors.append(f'Request {draft_id} does not belong to you.')
+                continue
+            if pr.status != 'Draft':
+                errors.append(f'Request {draft_id} is not in Draft status.')
+                continue
+            pr.status            = 'Submitted'
+            pr.current_level     = 1
+            pr.approver_ecno     = approver_ecno
+            pr.approver_name     = data.get('approverName')
+            pr.registrar_ecno    = registrar_ecno
+            pr.registrar_name    = data.get('registrarName')
+            pr.dd_ecno           = dd_ecno
+            pr.dd_name           = data.get('ddName')
+            pr.updated_at        = datetime.utcnow()
+            submitted_count += 1
+
+        db.session.commit()
+        return jsonify({
+            'message': f'{submitted_count} request(s) submitted for approval.',
+            'submitted': submitted_count,
+            'errors': errors,
+        }), 200
+
+    @app.route('/api/assets/assigned-to-me', methods=['GET'])
+    @jwt_required()
+    def get_assigned_to_me():
+        """
+        Return pending requests that are currently awaiting MY action.
+        - Level 1 (Submitted):         I am the Approver
+        - Level 2 (Approver Approved): I am the Registrar
+        - Level 3 (Registrar Approved):I am the DD
+        - Level 4 (DD Approved):       I am an Admin (role='Admin')
+        """
+        from sqlalchemy import or_, and_
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        ecno            = (current_user.emp_code or '').strip().upper()
+        is_admin        = (current_user.role or '').strip().lower() == 'admin'
+
+        filters = [
+            and_(
+                func.upper(func.ltrim(func.rtrim(PendingRequest.approver_ecno))) == ecno,
+                PendingRequest.status == 'Submitted'
+            ),
+            and_(
+                func.upper(func.ltrim(func.rtrim(PendingRequest.registrar_ecno))) == ecno,
+                PendingRequest.status == 'Approver Approved'
+            ),
+            and_(
+                func.upper(func.ltrim(func.rtrim(PendingRequest.dd_ecno))) == ecno,
+                PendingRequest.status == 'Registrar Approved'
+            ),
+        ]
+        if is_admin:
+            filters.append(PendingRequest.status == 'DD Approved')
+
+        rows = PendingRequest.query.filter(or_(*filters)) \
+                                   .order_by(PendingRequest.created_at.asc()).all()
+        return jsonify([r.to_dict() for r in rows]), 200
+
+    @app.route('/api/assets/pending-requests/<int:request_id>/approve', methods=['POST'])
+    @jwt_required()
+    def approve_pending_request(request_id):
+        """
+        Approve or Reject a pending request.
+        Body: { action: 'approve'|'reject', remarks: '...' }
+        Automatically advances to the next level.
+        On final Admin approval: writes record to dbo.ACMS_list_2027.
+        """
+        from sqlalchemy import or_, and_
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        ecno            = (current_user.emp_code or '').strip().upper()
+        is_admin        = (current_user.role or '').strip().lower() == 'admin'
+        data            = request.get_json() or {}
+        action          = (data.get('action') or '').strip().lower()  # 'approve' | 'reject'
+        remarks         = data.get('remarks', '')
+
+        if action not in ('approve', 'reject'):
+            return jsonify({'error': 'action must be approve or reject.'}), 400
+
+        pr = PendingRequest.query.get_or_404(request_id)
+        now = datetime.utcnow()
+
+        # — Validate that this user is allowed to act at the current level —
+        allowed = False
+        if pr.status == 'Submitted' and (pr.approver_ecno or '').strip().upper() == ecno:
+            allowed = True
+            if action == 'approve':
+                pr.approver_remarks   = remarks
+                pr.approver_action_at = now
+                pr.status             = 'Approver Approved'
+                pr.current_level      = 2
+            else:
+                pr.approver_remarks   = remarks
+                pr.approver_action_at = now
+                pr.status             = 'Rejected'
+
+        elif pr.status == 'Approver Approved' and (pr.registrar_ecno or '').strip().upper() == ecno:
+            allowed = True
+            if action == 'approve':
+                pr.registrar_remarks   = remarks
+                pr.registrar_action_at = now
+                pr.status              = 'Registrar Approved'
+                pr.current_level       = 3
+            else:
+                pr.registrar_remarks   = remarks
+                pr.registrar_action_at = now
+                pr.status              = 'Rejected'
+
+        elif pr.status == 'Registrar Approved' and (pr.dd_ecno or '').strip().upper() == ecno:
+            allowed = True
+            if action == 'approve':
+                pr.dd_remarks   = remarks
+                pr.dd_action_at = now
+                pr.status       = 'DD Approved'
+                pr.current_level = 4
+            else:
+                pr.dd_remarks   = remarks
+                pr.dd_action_at = now
+                pr.status       = 'Rejected'
+
+        elif pr.status == 'DD Approved' and is_admin:
+            allowed = True
+            if action == 'approve':
+                pr.admin_remarks   = remarks
+                pr.admin_action_at = now
+                pr.status          = 'Approved'
+                pr.current_level   = 5
+                # — Write to dbo.ACMS_list_2027 —
+                try:
+                    acms = AcmsList2027(
+                        asset_number         = pr.asset_number,
+                        serial_number        = pr.serial_number,
+                        category             = pr.category,
+                        make                 = pr.make,
+                        model                = pr.model,
+                        configuration        = pr.configuration,
+                        network_domain       = pr.network_domain,
+                        ip_address           = pr.ip_address,
+                        monitor              = pr.monitor,
+                        asset_custodian_ecno = pr.asset_custodian_ecno,
+                        user_division        = pr.user_division,
+                        group_name           = pr.group_name,
+                        area                 = pr.area,
+                        location             = pr.location,
+                        acms_fms             = pr.acms_fms,
+                        warranty             = pr.warranty or 'No',
+                        fms_expiry_date      = pr.fms_expiry_date,
+                        assigned_to          = None,
+                        status               = 'Available',
+                    )
+                    db.session.add(acms)
+                    print(f'[INFO] Written to ACMS_list_2027: serial={pr.serial_number}')
+                except Exception as e:
+                    print(f'[ERROR] Failed to write to ACMS_list_2027: {e}')
+            else:
+                pr.admin_remarks   = remarks
+                pr.admin_action_at = now
+                pr.status          = 'Rejected'
+
+        if not allowed:
+            return jsonify({'error': 'You are not authorised to act on this request at its current level.'}), 403
+
+        pr.updated_at = now
+        db.session.commit()
+        return jsonify({'message': f'Request {action}d successfully.', 'status': pr.status}), 200
 
     @app.route('/api/assets/pending-requests', methods=['GET'])
     @jwt_required()
