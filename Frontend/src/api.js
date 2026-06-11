@@ -281,3 +281,50 @@ export async function deleteAsset(assetId) {
   }
   return apiFetch(`/assets/${assetId}`, { method: 'DELETE' });
 }
+
+// ---------------------------------------------------------------------------
+// APPROVAL PENDING WORKFLOW
+// ---------------------------------------------------------------------------
+
+/** Fetch the list of available approvers (for the dropdown when submitting a request). */
+export async function getApprovers() {
+  if (USE_MOCK) { await delay(300); return []; }
+  return apiFetch('/assets/approvers');
+}
+
+/** Fetch the list of available Deputy Directors (for the dropdown). */
+export async function getDDs() {
+  if (USE_MOCK) { await delay(300); return []; }
+  return apiFetch('/assets/dds');
+}
+
+/**
+ * Submit a new request to add a system to the ACMS list.
+ * Sends all asset fields plus approver and DD selections.
+ */
+export async function requestAssetAdd(data) {
+  if (USE_MOCK) {
+    await delay(500);
+    return { message: 'Request submitted (mock)', id: Math.floor(Math.random() * 1000) };
+  }
+  return apiFetch('/assets/request-add', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Get all pending requests submitted by the logged-in user. */
+export async function getPendingRequests(includeWithdrawn = false) {
+  if (USE_MOCK) { await delay(400); return []; }
+  const qs = includeWithdrawn ? '?include_withdrawn=true' : '';
+  return apiFetch(`/assets/pending-requests${qs}`);
+}
+
+/** Withdraw a specific pending request by its ID. */
+export async function withdrawPendingRequest(requestId) {
+  if (USE_MOCK) {
+    await delay(300);
+    return { message: 'Withdrawn (mock)' };
+  }
+  return apiFetch(`/assets/pending-requests/${requestId}/withdraw`, { method: 'POST' });
+}

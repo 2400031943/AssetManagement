@@ -138,3 +138,116 @@ class AcmsList2027(db.Model):
     status               = db.Column(db.String(50),  nullable=True, default='Available')
 
     created_at           = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class PendingRequest(db.Model):
+    """
+    Approval workflow for adding a system to the ACMS list.
+    Flow: Submitted → Approver → Registrar → DD → Admin → Approved
+    Can be Withdrawn by the requester or Rejected at any level.
+    """
+    __tablename__ = 'pending_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # ── Requester info ──────────────────────────────────────────────────────
+    requester_ecno       = db.Column(db.String(50),  nullable=False)
+    requester_name       = db.Column(db.String(100), nullable=True)
+
+    # ── Asset identification ─────────────────────────────────────────────────
+    asset_number         = db.Column(db.String(100), nullable=True)
+    serial_number        = db.Column(db.String(100), nullable=True)
+
+    # ── Asset classification ─────────────────────────────────────────────────
+    category             = db.Column(db.String(100), nullable=True)
+    make                 = db.Column(db.String(100), nullable=True)
+    model                = db.Column(db.String(100), nullable=True)
+
+    # ── Network ──────────────────────────────────────────────────────────────
+    configuration        = db.Column(db.Text,        nullable=True)
+    network_domain       = db.Column(db.String(100), nullable=True)
+    ip_address           = db.Column(db.String(50),  nullable=True)
+
+    # ── Monitor ──────────────────────────────────────────────────────────────
+    monitor              = db.Column(db.String(100), nullable=True)
+
+    # ── Organisational ───────────────────────────────────────────────────────
+    asset_custodian_ecno = db.Column(db.String(50),  nullable=True)
+    user_division        = db.Column(db.String(100), nullable=True)
+    group_name           = db.Column(db.String(100), nullable=True)
+    area                 = db.Column(db.String(100), nullable=True)
+    location             = db.Column(db.String(100), nullable=True)
+
+    # ── Compliance ───────────────────────────────────────────────────────────
+    acms_fms             = db.Column(db.String(100), nullable=True)
+    warranty             = db.Column(db.String(3),   nullable=True, default='No')
+    fms_expiry_date      = db.Column(db.Date,        nullable=True)
+
+    # ── Approval workflow ────────────────────────────────────────────────────
+    # status: Submitted | Approver Approved | Registrar Approved | DD Approved | Approved | Rejected | Withdrawn
+    status               = db.Column(db.String(30),  nullable=False, default='Submitted')
+    current_level        = db.Column(db.Integer,     nullable=False, default=1)
+    # Level 1 — Approver (selected by requester)
+    approver_ecno        = db.Column(db.String(50),  nullable=True)
+    approver_name        = db.Column(db.String(100), nullable=True)
+    approver_remarks     = db.Column(db.Text,        nullable=True)
+    approver_action_at   = db.Column(db.DateTime,    nullable=True)
+    # Level 2 — Registrar (auto-assigned by division/area)
+    registrar_ecno       = db.Column(db.String(50),  nullable=True)
+    registrar_name       = db.Column(db.String(100), nullable=True)
+    registrar_remarks    = db.Column(db.Text,        nullable=True)
+    registrar_action_at  = db.Column(db.DateTime,    nullable=True)
+    # Level 3 — DD (selected by requester)
+    dd_ecno              = db.Column(db.String(50),  nullable=True)
+    dd_name              = db.Column(db.String(100), nullable=True)
+    dd_remarks           = db.Column(db.Text,        nullable=True)
+    dd_action_at         = db.Column(db.DateTime,    nullable=True)
+    # Level 4 — Admin (system admin, final approval)
+    admin_remarks        = db.Column(db.Text,        nullable=True)
+    admin_action_at      = db.Column(db.DateTime,    nullable=True)
+
+    # ── Timestamps ───────────────────────────────────────────────────────────
+    created_at           = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at           = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id':                self.id,
+            'requesterEcno':     self.requester_ecno,
+            'requesterName':     self.requester_name,
+            'assetNumber':       self.asset_number,
+            'serialNumber':      self.serial_number,
+            'category':          self.category,
+            'make':              self.make,
+            'model':             self.model,
+            'configuration':     self.configuration,
+            'networkDomain':     self.network_domain,
+            'ipAddress':         self.ip_address,
+            'monitor':           self.monitor,
+            'assetCustodianEcno':self.asset_custodian_ecno,
+            'userDivision':      self.user_division,
+            'group':             self.group_name,
+            'area':              self.area,
+            'location':          self.location,
+            'acmsFms':           self.acms_fms,
+            'warranty':          self.warranty,
+            'fmsExpiryDate':     self.fms_expiry_date.isoformat() if self.fms_expiry_date else None,
+            'status':            self.status,
+            'currentLevel':      self.current_level,
+            'approverEcno':      self.approver_ecno,
+            'approverName':      self.approver_name,
+            'approverRemarks':   self.approver_remarks,
+            'approverActionAt':  self.approver_action_at.isoformat() if self.approver_action_at else None,
+            'registrarEcno':     self.registrar_ecno,
+            'registrarName':     self.registrar_name,
+            'registrarRemarks':  self.registrar_remarks,
+            'registrarActionAt': self.registrar_action_at.isoformat() if self.registrar_action_at else None,
+            'ddEcno':            self.dd_ecno,
+            'ddName':            self.dd_name,
+            'ddRemarks':         self.dd_remarks,
+            'ddActionAt':        self.dd_action_at.isoformat() if self.dd_action_at else None,
+            'adminRemarks':      self.admin_remarks,
+            'adminActionAt':     self.admin_action_at.isoformat() if self.admin_action_at else None,
+            'createdAt':         self.created_at.isoformat() if self.created_at else None,
+            'updatedAt':         self.updated_at.isoformat() if self.updated_at else None,
+        }

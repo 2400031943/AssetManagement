@@ -5,8 +5,8 @@ from flask_jwt_extended import (
     jwt_required, get_jwt_identity
 )
 from config import Config
-from models import db, User, Asset, AcmsList2027
-from datetime import date
+from models import db, User, Asset, AcmsList2027, PendingRequest
+from datetime import date, datetime
 from sqlalchemy import func, text
 from auth import auth_bp
 
@@ -429,6 +429,147 @@ def create_app(config_class=Config):
             'sample_acms':         [dict(r) for r in sample_rows],
             'filter_column':       'Asset Custodian ECNO_(Refer PIS Database)',
         }), 200
+
+    # ===========================================================================
+    # APPROVAL WORKFLOW — PENDING REQUESTS
+    # ===========================================================================
+    # Flow: Submitted → Approver Approved → Registrar Approved → DD Approved → Approved
+    # The requester picks Approver and DD; Registrar is auto-assigned by division.
+    # ===========================================================================
+
+    # ── Registrar map: division/area → (ecno, name) ─────────────────────────
+    # TODO: Replace with real ECNOs once provided by the user.
+    REGISTRAR_MAP = {
+        # 'DIVISION_NAME': ('ECNO', 'Full Name'),
+        # Example:
+        # 'DPFD':  ('NR12345', 'John Registrar'),
+        # 'ASAG':  ('NR67890', 'Jane Registrar'),
+        'DEFAULT': ('', 'Registrar'),   # fallback
+    }
+
+    # ── Static lists: approvers and DDs (placeholder — update with real data) ─
+    # TODO: Replace with real ECNOs and names once provided.
+    APPROVER_LIST = [
+        # {'ecno': 'NR12345', 'name': 'Approver Name'},
+    ]
+    DD_LIST = [
+        # {'ecno': 'NR99999', 'name': 'DD Name'},
+    ]
+
+    @app.route('/api/assets/approvers', methods=['GET'])
+    @jwt_required()
+    def get_approvers():
+        """Return the list of available approvers for the requester to pick from."""
+        return jsonify(APPROVER_LIST), 200
+
+    @app.route('/api/assets/dds', methods=['GET'])
+    @jwt_required()
+    def get_dds():
+        """Return the list of available Deputy Directors for the requester to pick from."""
+        return jsonify(DD_LIST), 200
+
+    @app.route('/api/assets/request-add', methods=['POST'])
+    @jwt_required()
+    def request_asset_add():
+        """
+        Submit a new approval request to add a system to the ACMS list.
+        Body: all asset fields + approver_ecno + approver_name + dd_ecno + dd_name
+        """
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        data            = request.get_json() or {}
+
+        # Auto-assign registrar based on requester division
+        division         = (data.get('userDivision') or current_user.division or '').strip()
+        registrar_entry  = REGISTRAR_MAP.get(division) or REGISTRAR_MAP.get('DEFAULT', ('', ''))
+        registrar_ecno, registrar_name = registrar_entry
+
+        pr = PendingRequest(
+            requester_ecno       = (current_user.emp_code or '').strip().upper(),
+            requester_name       = current_user.username,
+            asset_number         = data.get('assetNumber'),
+            serial_number        = data.get('serialNumber'),
+            category             = data.get('category') or data.get('CATEGORY'),
+            make                 = data.get('make'),
+            model                = data.get('model'),
+            configuration        = data.get('configuration'),
+            network_domain       = data.get('networkDomain'),
+            ip_address           = data.get('ipAddress'),
+            monitor              = data.get('monitor') or data.get('Monitor'),
+            asset_custodian_ecno = data.get('assetCustodianEcno') or data.get('AssetCustodianECNO'),
+            user_division        = data.get('userDivision') or data.get('UserDivision'),
+            group_name           = data.get('group') or data.get('GROUP'),
+            area                 = data.get('area') or data.get('AREA'),
+            location             = data.get('location') or data.get('LOCATION'),
+            acms_fms             = data.get('acmsFms'),
+            warranty             = data.get('warranty', 'No'),
+            fms_expiry_date      = None,  # set below if provided
+            status               = 'Submitted',
+            current_level        = 1,
+            approver_ecno        = data.get('approverEcno'),
+            approver_name        = data.get('approverName'),
+            registrar_ecno       = registrar_ecno or None,
+            registrar_name       = registrar_name or None,
+            dd_ecno              = data.get('ddEcno'),
+            dd_name              = data.get('ddName'),
+        )
+
+        # Parse fms_expiry_date if warranty=Yes
+        raw_date = data.get('fmsExpiryDate') or data.get('warrantyExpiry')
+        if raw_date:
+            try:
+                pr.fms_expiry_date = datetime.strptime(raw_date[:10], '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+        db.session.add(pr)
+        db.session.commit()
+        return jsonify({'message': 'Request submitted successfully.', 'id': pr.id}), 201
+
+    @app.route('/api/assets/pending-requests', methods=['GET'])
+    @jwt_required()
+    def get_pending_requests():
+        """
+        Return all pending requests submitted by the logged-in user.
+        Excludes Withdrawn records unless ?include_withdrawn=true.
+        """
+        current_user_id  = int(get_jwt_identity())
+        current_user     = User.query.get_or_404(current_user_id)
+        employee_code    = (current_user.emp_code or '').strip().upper()
+        include_all      = request.args.get('include_withdrawn', 'false').lower() == 'true'
+
+        query = PendingRequest.query.filter(
+            func.upper(func.ltrim(func.rtrim(PendingRequest.requester_ecno))) == employee_code
+        )
+        if not include_all:
+            query = query.filter(PendingRequest.status != 'Withdrawn')
+
+        rows = query.order_by(PendingRequest.created_at.desc()).all()
+        return jsonify([r.to_dict() for r in rows]), 200
+
+    @app.route('/api/assets/pending-requests/<int:request_id>/withdraw', methods=['POST'])
+    @jwt_required()
+    def withdraw_pending_request(request_id):
+        """
+        Withdraw a pending request (only allowed by the original requester,
+        and only if status is Submitted or Approver Approved).
+        """
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        employee_code   = (current_user.emp_code or '').strip().upper()
+
+        pr = PendingRequest.query.get_or_404(request_id)
+
+        if pr.requester_ecno.strip().upper() != employee_code:
+            return jsonify({'error': 'You can only withdraw your own requests.'}), 403
+
+        if pr.status not in ('Submitted', 'Approver Approved'):
+            return jsonify({'error': f'Cannot withdraw a request with status "{pr.status}".'}), 400
+
+        pr.status     = 'Withdrawn'
+        pr.updated_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'message': 'Request withdrawn successfully.'}), 200
 
     @app.route('/api/assets/mine', methods=['GET'])
     @jwt_required()
