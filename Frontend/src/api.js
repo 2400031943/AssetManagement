@@ -10,7 +10,7 @@ import { getStoredToken, getStoredUser } from './authSession';
  */
 
 
-const USE_MOCK = true;                    // ← flip to false for real backend
+const USE_MOCK = false;                     // ← flip to true for mock data
 const BASE_URL = 'http://localhost:5000/api'; // ← Flask backend URL
 
 // ---------------------------------------------------------------------------
