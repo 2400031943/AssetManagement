@@ -471,6 +471,9 @@ def create_app(config_class=Config):
                 LTRIM(RTRIM(e.FUNCDESGDES))   AS designation,
                 e.FUNCDESGCODE                AS code
             FROM TBAD_EMPFUNCDESG_VIEW e
+            INNER JOIN TBAD_EMPLOYEE emp
+                ON LTRIM(RTRIM(emp.EMPLOYEECODE)) = LTRIM(RTRIM(e.EMPLOYEECODE))
+               AND LTRIM(RTRIM(emp.SERVICESTATCODE)) = 'SERV'
             LEFT JOIN VIEWEMPINFO v
                 ON LTRIM(RTRIM(v.EMPLOYEECODE)) = LTRIM(RTRIM(e.EMPLOYEECODE))
             WHERE e.FUNCDESGCODE IN ({placeholders})
