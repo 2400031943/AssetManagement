@@ -304,6 +304,12 @@ export async function getDDs() {
   return apiFetch('/assets/dds');
 }
 
+/** Fetch the list of available Admins (for the dropdown). */
+export async function getAdmins() {
+  if (USE_MOCK) { await delay(300); return []; }
+  return apiFetch('/assets/admins');
+}
+
 /**
  * Submit a new request to add a system to the ACMS list.
  * Sends all asset fields plus approver and DD selections.

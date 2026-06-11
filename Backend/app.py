@@ -437,35 +437,97 @@ def create_app(config_class=Config):
     # The requester manually selects Approver, Registrar, and DD from dropdowns.
     # ===========================================================================
 
-    # ── Static lists: all three levels are manually selected from dropdowns ────
-    # TODO: Replace with real ECNOs and names once provided by the user.
-    APPROVER_LIST = [
-        # {'ecno': 'NR12345', 'name': 'Approver Name'},
-    ]
-    REGISTRAR_LIST = [
-        # {'ecno': 'NR22222', 'name': 'Registrar Name'},
-    ]
-    DD_LIST = [
-        # {'ecno': 'NR99999', 'name': 'DD Name'},
-    ]
+    # ── FUNCDESGCODE sets ────────────────────────────────────────────────────
+    # Approver / Registrar / Admin share these designation codes
+    APPROVAL_FUNC_CODES = (
+        400, 500, 300, 310, 510, 30, 20, 50, 55, 60,
+        61, 65, 70, 105, 501, 530, 540, 550, 560, 600,
+        2060, 2090, 2091
+    )
+    # DD has its own code
+    DD_FUNC_CODE = 40
+
+    def _fetch_personnel_from_remote(func_codes):
+        """
+        Query TBAD_EMPFUNCDESG_VIEW joined with VIEWEMPINFO from cowmis.
+        Returns list of {ecno, name, designation} for the given FUNCDESGCODE(s).
+        Returns [] gracefully if remote DB is unreachable.
+        """
+        remote_engine = db.engines.get('remote_pis')
+        if not remote_engine:
+            return []
+
+        # Build the IN (...) clause safely with numbered placeholders
+        if isinstance(func_codes, int):
+            func_codes = (func_codes,)
+
+        placeholders = ', '.join(f':c{i}' for i in range(len(func_codes)))
+        params = {f'c{i}': v for i, v in enumerate(func_codes)}
+
+        query = text(f"""
+            SELECT DISTINCT
+                LTRIM(RTRIM(e.EMPLOYEECODE))  AS ecno,
+                LTRIM(RTRIM(v.EMPLOYEENAME))  AS name,
+                LTRIM(RTRIM(e.FUNCDESGDES))   AS designation,
+                e.FUNCDESGCODE                AS code
+            FROM TBAD_EMPFUNCDESG_VIEW e
+            LEFT JOIN VIEWEMPINFO v
+                ON LTRIM(RTRIM(v.EMPLOYEECODE)) = LTRIM(RTRIM(e.EMPLOYEECODE))
+            WHERE e.FUNCDESGCODE IN ({placeholders})
+            ORDER BY v.EMPLOYEENAME
+        """)
+
+        try:
+            with remote_engine.connect() as conn:
+                rows = conn.execute(query, params).mappings().all()
+            return [
+                {
+                    'ecno':        row.get('ecno') or '',
+                    'name':        row.get('name') or row.get('ecno') or '',
+                    'designation': row.get('designation') or '',
+                    'code':        row.get('code'),
+                }
+                for row in rows
+                if row.get('ecno')
+            ]
+        except Exception as e:
+            print(f'[WARN] Could not fetch personnel from remote cowmis: {e}')
+            return []
 
     @app.route('/api/assets/approvers', methods=['GET'])
     @jwt_required()
     def get_approvers():
-        """Return the list of available approvers for the requester to pick from."""
-        return jsonify(APPROVER_LIST), 200
+        """
+        Return personnel list for Approver dropdown.
+        Source: TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO, FUNCDESGCODE IN APPROVAL_FUNC_CODES.
+        """
+        return jsonify(_fetch_personnel_from_remote(APPROVAL_FUNC_CODES)), 200
 
     @app.route('/api/assets/registrars', methods=['GET'])
     @jwt_required()
     def get_registrars():
-        """Return the list of available registrars for the requester to pick from."""
-        return jsonify(REGISTRAR_LIST), 200
+        """
+        Return personnel list for Registrar dropdown.
+        Source: same as approvers — FUNCDESGCODE IN APPROVAL_FUNC_CODES.
+        """
+        return jsonify(_fetch_personnel_from_remote(APPROVAL_FUNC_CODES)), 200
 
     @app.route('/api/assets/dds', methods=['GET'])
     @jwt_required()
     def get_dds():
-        """Return the list of available Deputy Directors for the requester to pick from."""
-        return jsonify(DD_LIST), 200
+        """
+        Return personnel list for Deputy Director dropdown.
+        Source: TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO, FUNCDESGCODE = 40.
+        """
+        return jsonify(_fetch_personnel_from_remote(DD_FUNC_CODE)), 200
+
+    @app.route('/api/assets/admins', methods=['GET'])
+    @jwt_required()
+    def get_admins():
+        """
+        Return personnel list for Admin dropdown (same codes as approvers).
+        """
+        return jsonify(_fetch_personnel_from_remote(APPROVAL_FUNC_CODES)), 200
 
     @app.route('/api/assets/request-add', methods=['POST'])
     @jwt_required()
