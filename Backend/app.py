@@ -112,7 +112,6 @@ def _imported_asset_to_dict(row, source, index):
         'Monitor': _clean_value(row.get('monitor')),
         'AssetCustodianECNO': asset_custodian_ecno,
         'SystemCurrentUserECNO': current_user_ecno,
-        SYSTEM_CURRENT_USER_ECNO_COLUMN: current_user_ecno,
         'UserDivision': _clean_value(row.get('user_division')),
         'GROUP': _clean_value(row.get('group_name')),
         'AREA': _clean_value(row.get('area')),
@@ -133,7 +132,6 @@ def _is_placeholder(value):
 
 
 
-    return assets
 
 
 # ---------------------------------------------------------------------------
