@@ -392,7 +392,7 @@ const EMPTY_FORM = {
   LOCATION: '', LOCATIONOther: '',
 };
 
-export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess }) {
+export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeTabMode, setActiveTab }) {
   const [formData, setFormData]           = useState(EMPTY_FORM);
   const [status, setStatus]               = useState({ type: null, message: '' });
   const [saved, setSaved]                 = useState(false);
