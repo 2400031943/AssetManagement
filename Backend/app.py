@@ -434,23 +434,16 @@ def create_app(config_class=Config):
     # APPROVAL WORKFLOW — PENDING REQUESTS
     # ===========================================================================
     # Flow: Submitted → Approver Approved → Registrar Approved → DD Approved → Approved
-    # The requester picks Approver and DD; Registrar is auto-assigned by division.
+    # The requester manually selects Approver, Registrar, and DD from dropdowns.
     # ===========================================================================
 
-    # ── Registrar map: division/area → (ecno, name) ─────────────────────────
-    # TODO: Replace with real ECNOs once provided by the user.
-    REGISTRAR_MAP = {
-        # 'DIVISION_NAME': ('ECNO', 'Full Name'),
-        # Example:
-        # 'DPFD':  ('NR12345', 'John Registrar'),
-        # 'ASAG':  ('NR67890', 'Jane Registrar'),
-        'DEFAULT': ('', 'Registrar'),   # fallback
-    }
-
-    # ── Static lists: approvers and DDs (placeholder — update with real data) ─
-    # TODO: Replace with real ECNOs and names once provided.
+    # ── Static lists: all three levels are manually selected from dropdowns ────
+    # TODO: Replace with real ECNOs and names once provided by the user.
     APPROVER_LIST = [
         # {'ecno': 'NR12345', 'name': 'Approver Name'},
+    ]
+    REGISTRAR_LIST = [
+        # {'ecno': 'NR22222', 'name': 'Registrar Name'},
     ]
     DD_LIST = [
         # {'ecno': 'NR99999', 'name': 'DD Name'},
@@ -461,6 +454,12 @@ def create_app(config_class=Config):
     def get_approvers():
         """Return the list of available approvers for the requester to pick from."""
         return jsonify(APPROVER_LIST), 200
+
+    @app.route('/api/assets/registrars', methods=['GET'])
+    @jwt_required()
+    def get_registrars():
+        """Return the list of available registrars for the requester to pick from."""
+        return jsonify(REGISTRAR_LIST), 200
 
     @app.route('/api/assets/dds', methods=['GET'])
     @jwt_required()
@@ -478,11 +477,6 @@ def create_app(config_class=Config):
         current_user_id = int(get_jwt_identity())
         current_user    = User.query.get_or_404(current_user_id)
         data            = request.get_json() or {}
-
-        # Auto-assign registrar based on requester division
-        division         = (data.get('userDivision') or current_user.division or '').strip()
-        registrar_entry  = REGISTRAR_MAP.get(division) or REGISTRAR_MAP.get('DEFAULT', ('', ''))
-        registrar_ecno, registrar_name = registrar_entry
 
         pr = PendingRequest(
             requester_ecno       = (current_user.emp_code or '').strip().upper(),
@@ -508,8 +502,8 @@ def create_app(config_class=Config):
             current_level        = 1,
             approver_ecno        = data.get('approverEcno'),
             approver_name        = data.get('approverName'),
-            registrar_ecno       = registrar_ecno or None,
-            registrar_name       = registrar_name or None,
+            registrar_ecno       = data.get('registrarEcno'),
+            registrar_name       = data.get('registrarName'),
             dd_ecno              = data.get('ddEcno'),
             dd_name              = data.get('ddName'),
         )

@@ -292,6 +292,12 @@ export async function getApprovers() {
   return apiFetch('/assets/approvers');
 }
 
+/** Fetch the list of available registrars (for the dropdown when submitting a request). */
+export async function getRegistrars() {
+  if (USE_MOCK) { await delay(300); return []; }
+  return apiFetch('/assets/registrars');
+}
+
 /** Fetch the list of available Deputy Directors (for the dropdown). */
 export async function getDDs() {
   if (USE_MOCK) { await delay(300); return []; }
