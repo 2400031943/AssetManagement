@@ -77,12 +77,60 @@ function ListCheckBtn({ label, year, color, serialNumber }) {
   );
 }
 
-function RecommendationCard({ rec, isSelected, onClick }) {
-  const [expanded, setExpanded] = React.useState(false);
-  const [requested, setRequested] = React.useState(false);
+function RecommendationCard({ rec, isSelected, onClick, approversList, registrarsList, ddsList, onRequestAdd }) {
+  const [expanded, setExpanded]     = React.useState(false);
+  const [showPanel, setShowPanel]   = React.useState(false); // approval dropdown panel
+  const [selApprover, setSelApprover] = React.useState(null);
+  const [selRegistrar, setSelRegistrar] = React.useState(null);
+  const [selDD, setSelDD]           = React.useState(null);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitDone, setSubmitDone] = React.useState(null); // {success, message}
+
   const desc        = rec.configuration || '';
   const isLong      = desc.length > DESC_LIMIT;
   const displayDesc = expanded || !isLong ? desc : desc.slice(0, DESC_LIMIT) + '…';
+
+  const handleRequestAdd = async (e) => {
+    e.stopPropagation();
+    if (!selApprover || !selRegistrar || !selDD) {
+      alert('Please select Approver, Registrar and Deputy Director.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onRequestAdd(rec, selApprover, selRegistrar, selDD);
+      setSubmitDone({ success: true, message: '✓ Sent for approval!' });
+      setShowPanel(false);
+      setSelApprover(null); setSelRegistrar(null); setSelDD(null);
+    } catch (err) {
+      setSubmitDone({ success: false, message: err.message || 'Failed to send.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const PersonDropdown = ({ label, list, selected, setter }) => (
+    <div style={{ marginBottom: '0.65rem' }}>
+      <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>{label}</label>
+      <select
+        value={selected ? selected.ecno : ''}
+        onChange={e => setter(list.find(p => p.ecno === e.target.value) || null)}
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', padding: '0.4rem 0.6rem',
+          background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.15)',
+          borderRadius: 7, color: '#e2e8f0', fontSize: '0.8rem', cursor: 'pointer',
+        }}
+      >
+        <option value="">-- Select {label} --</option>
+        {list.length === 0 && <option disabled>No personnel (remote DB offline)</option>}
+        {list.map(p => (
+          <option key={p.ecno} value={p.ecno}>{p.name} — {p.designation} ({p.ecno})</option>
+        ))}
+      </select>
+      {selected && <div style={{ marginTop: '0.2rem', fontSize: '0.7rem', color: '#a5b4fc' }}>✓ {selected.name} · {selected.ecno}</div>}
+    </div>
+  );
 
   return (
     <div
@@ -100,7 +148,7 @@ function RecommendationCard({ rec, isSelected, onClick }) {
         marginBottom: '0.6rem',
       }}
     >
-      {/* ── Top row: COINS badge  +  three action buttons ── */}
+      {/* ── Top row: COINS badge + three action buttons ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.4rem' }}>
         {/* Left: COINS badge + selected check */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -114,39 +162,72 @@ function RecommendationCard({ rec, isSelected, onClick }) {
 
         {/* Right: three action buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-          {/* 1. Check 2026 List */}
-          <ListCheckBtn
-            label="2026 List?"
-            year={2026}
-            color="#60a5fa"
-            serialNumber={rec.serialNumber}
-          />
-          {/* 2. Check 2027 List */}
-          <ListCheckBtn
-            label="2027 List?"
-            year={2027}
-            color="#a78bfa"
-            serialNumber={rec.serialNumber}
-          />
-          {/* 3. Request to add — placeholder */}
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); setRequested(true); }}
-            title="Request to add into My ACMS list (coming soon)"
-            style={{
-              background: requested ? 'rgba(34,197,94,0.12)' : 'rgba(251,191,36,0.08)',
-              color: requested ? '#22c55e' : '#f59e0b',
-              border: requested ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(251,191,36,0.3)',
-              borderRadius: '6px', padding: '3px 9px',
-              fontSize: '0.68rem', fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.2s',
-              whiteSpace: 'nowrap', letterSpacing: '0.02em',
-            }}
-          >
-            {requested ? '✓ Requested' : '+ Request Add'}
-          </button>
+          <ListCheckBtn label="2026 List?" year={2026} color="#60a5fa" serialNumber={rec.serialNumber} />
+          <ListCheckBtn label="2027 List?" year={2027} color="#a78bfa" serialNumber={rec.serialNumber} />
+          {/* Request Add button */}
+          {submitDone ? (
+            <span style={{
+              fontSize: '0.68rem', fontWeight: 700, padding: '3px 9px', borderRadius: 6,
+              background: submitDone.success ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)',
+              color: submitDone.success ? '#22c55e' : '#ef4444',
+              border: `1px solid ${submitDone.success ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            }}>{submitDone.message}</span>
+          ) : (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); setShowPanel(v => !v); }}
+              style={{
+                background: showPanel ? 'rgba(245,158,11,0.15)' : 'rgba(251,191,36,0.08)',
+                color: '#f59e0b',
+                border: `1px solid ${showPanel ? 'rgba(245,158,11,0.5)' : 'rgba(251,191,36,0.3)'}`,
+                borderRadius: '6px', padding: '3px 9px',
+                fontSize: '0.68rem', fontWeight: 700,
+                cursor: 'pointer', transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {showPanel ? '✕ Cancel' : '+ Request Add'}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* ── Inline approval panel (shown when showPanel=true) ── */}
+      {showPanel && !submitDone && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: 'rgba(108,99,255,0.07)', border: '1.5px solid rgba(108,99,255,0.25)',
+            borderRadius: 10, padding: '0.9rem 1rem', marginBottom: '0.75rem',
+          }}
+        >
+          <p style={{ margin: '0 0 0.7rem', fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 600 }}>
+            Select Approver, Registrar &amp; DD to request adding this system to ACMS 2027 list:
+          </p>
+          <PersonDropdown label="Approver"             list={approversList}  selected={selApprover}  setter={setSelApprover} />
+          <PersonDropdown label="Registrar"            list={registrarsList} selected={selRegistrar} setter={setSelRegistrar} />
+          <PersonDropdown label="Deputy Director (DD)" list={ddsList}        selected={selDD}        setter={setSelDD} />
+          <button
+            type="button"
+            onClick={handleRequestAdd}
+            disabled={submitting || !selApprover || !selRegistrar || !selDD}
+            style={{
+              width: '100%', padding: '0.55rem',
+              background: (!selApprover || !selRegistrar || !selDD) ? 'rgba(108,99,255,0.25)' : 'linear-gradient(135deg, #6c63ff, #a855f7)',
+              color: '#fff', border: 'none', borderRadius: 7,
+              fontSize: '0.85rem', fontWeight: 700,
+              cursor: submitting ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+              opacity: submitting ? 0.7 : 1, marginTop: '0.25rem',
+            }}
+          >
+            {submitting
+              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</>
+              : <><Send size={14} /> Send for Approval</>
+            }
+          </button>
+        </div>
+      )}
 
       {/* Clickable body — pre-fills form */}
       <button
@@ -533,7 +614,6 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
     }
   };
 
-  // ── Edit button click: ACMS card → open form in Edit mode
   const handleEditClick = (asset) => {
     setFormMode('edit');
     setEditingAsset(asset);
@@ -541,6 +621,36 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
     setSelectedRecId(null);
     setStatus({ type: null, message: '' });
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  };
+
+  // ── COINS card → "+ Request Add" → save draft then immediately submit with selected approvers
+  const handleCoinsRequestAdd = async (rec, approver, registrar, dd) => {
+    // Step 1: save as Draft
+    const draftRes = await requestAssetAdd({
+      assetNumber:        rec.assetNumber   || '',
+      serialNumber:       rec.serialNumber  || '',
+      configuration:      rec.configuration || '',
+      assetCustodianEcno: rec.asset_custodian_ecno || rec.AssetCustodianECNO || '',
+      category: '', make: '', model: '', networkDomain: '',
+      ipAddress: '', monitor: '', userDivision: '',
+      group: '', area: '', location: '', acmsFms: '', warranty: 'No',
+    });
+    const draftId = draftRes?.id;
+    if (!draftId) throw new Error('Failed to create draft.');
+
+    // Step 2: immediately submit with approver/registrar/dd selected
+    await submitPendingRequests({
+      draftIds:             [draftId],
+      approverEcno:         approver.ecno,
+      approverName:         approver.name,
+      approverDesignation:  approver.designation,
+      registrarEcno:        registrar.ecno,
+      registrarName:        registrar.name,
+      registrarDesignation: registrar.designation,
+      ddEcno:               dd.ecno,
+      ddName:               dd.name,
+      ddDesignation:        dd.designation,
+    });
   };
 
   // ── Close form
@@ -849,6 +959,10 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                   rec={rec}
                   isSelected={selectedRecId === rec.id}
                   onClick={handleCardClick}
+                  approversList={approversList}
+                  registrarsList={registrarsList}
+                  ddsList={ddsList}
+                  onRequestAdd={handleCoinsRequestAdd}
                 />
               ))}
 
