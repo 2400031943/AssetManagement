@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from sqlalchemy import text
 from models import db, User
 
@@ -53,7 +53,8 @@ def _query_employee_profile(conn, emp_code, schema_name, emp_code_column, employ
 def fetch_employee_profile(emp_code):
     """
     Fetch EMPLOYEECODE and EMPLOYEENAME from VIEWEMPINFO in the remote cowmis DB.
-    Returns dict with employeeCode and employeeName keys.
+    Also fetches the FUNCDESGCODE from TBAD_EMPFUNCDESG_VIEW.
+    Returns dict with employeeCode, employeeName, and funcdesgcode keys.
     """
     try:
         engine = db.engines['remote_pis']
@@ -68,20 +69,45 @@ def fetch_employee_profile(emp_code):
             WHERE UPPER(LTRIM(RTRIM(CAST([{EMPLOYEE_CODE_COLUMN}] AS NVARCHAR(50))))) = :ec
         """)
 
+        employee_code = emp_code
+        employee_name = emp_code
+        designation = ''
+        funcdesgcode = None
+
         with engine.connect() as conn:
             row = conn.execute(query, {'ec': emp_code}).mappings().first()
+            if row:
+                employee_code = row.get('employee_code') or emp_code
+                employee_name = row.get('employee_name') or emp_code
+                designation = row.get('designation') or ''
 
-        if not row:
-            print(f"INFO: No profile found in {EMPLOYEE_PROFILE_VIEW} for {emp_code}")
-            return {}
+            # Also fetch the FUNCDESGCODE from TBAD_EMPFUNCDESG_VIEW
+            try:
+                query_func = text("""
+                    SELECT TOP 1 FUNCDESGCODE 
+                    FROM TBAD_EMPFUNCDESG_VIEW 
+                    WHERE UPPER(LTRIM(RTRIM(CAST(EMPLOYEECODE AS NVARCHAR(50))))) = :ec
+                """)
+                row_func = conn.execute(query_func, {'ec': emp_code}).mappings().first()
+                if row_func:
+                    # Could be int, float, or string. Convert to int if possible.
+                    raw_val = row_func.get('FUNCDESGCODE')
+                    if raw_val is not None:
+                        try:
+                            funcdesgcode = int(float(raw_val))
+                        except (ValueError, TypeError):
+                            funcdesgcode = raw_val
+            except Exception as ex:
+                print(f"INFO: Could not fetch FUNCDESGCODE from TBAD_EMPFUNCDESG_VIEW: {ex}")
 
         return {
-            'employeeCode':        row.get('employee_code')  or emp_code,
-            'employeeName':        row.get('employee_name')  or emp_code,
-            'employeeDesignation': row.get('designation')    or '',
-            'EMPLOYEECODE':        row.get('employee_code')  or emp_code,
-            'EMPLOYEENAME':        row.get('employee_name')  or emp_code,
-            'DESGFULLNAME':        row.get('designation')    or '',
+            'employeeCode':        employee_code,
+            'employeeName':        employee_name,
+            'employeeDesignation': designation,
+            'EMPLOYEECODE':        employee_code,
+            'EMPLOYEENAME':        employee_name,
+            'DESGFULLNAME':        designation,
+            'funcdesgcode':        funcdesgcode,
         }
     except Exception as e:
         print(f"ERROR: fetch_employee_profile failed: {e}")
@@ -151,3 +177,30 @@ def login():
             "token": token,
             "user": user_payload
         }), 200
+
+
+@auth_bp.route('/me', methods=['GET'])
+@jwt_required()
+def get_current_user_profile():
+    """Get the current logged in user's profile details including dynamic remote DB info."""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        profile = {}
+        # Try to query remote PIS profile info
+        try:
+            profile = fetch_employee_profile(user.emp_code)
+        except Exception as e:
+            print(f"ERROR: fetch_employee_profile failed in /me: {e}")
+
+        user_payload = {
+            **user.to_dict(),
+            **profile,
+        }
+        return jsonify(user_payload), 200
+    except Exception as e:
+        print(f"ERROR: /me endpoint failed: {e}")
+        return jsonify({"error": str(e)}), 500

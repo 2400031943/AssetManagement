@@ -119,6 +119,14 @@ export async function login(emp_code, password) {
   });
 }
 
+export async function getCurrentUserProfile() {
+  if (USE_MOCK) {
+    await delay();
+    return getStoredUser();
+  }
+  return apiFetch('/auth/me');
+}
+
 // ---------------------------------------------------------------------------
 // USERS
 // ---------------------------------------------------------------------------

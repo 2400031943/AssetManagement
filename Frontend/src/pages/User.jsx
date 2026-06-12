@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LogOut, Database, LayoutDashboard, PlusCircle, Sparkles, Clock, ShieldCheck } from 'lucide-react';
 import { useNavigate } from '../routes';
-import { getMyAssets, createAsset, updateAsset } from '../api';
-import { getStoredSession, clearStoredSession } from '../authSession';
+import { getMyAssets, createAsset, updateAsset, getCurrentUserProfile } from '../api';
+import { getStoredSession, clearStoredSession, setStoredSession } from '../authSession';
 import MyAssets from '../components/MyAssets';
 import AddAsset from '../components/AddAsset';
 import ApprovalPending from '../components/ApprovalPending';
@@ -12,14 +12,32 @@ import './Dashboard.css';
 export default function User() {
   const navigate = useNavigate();
   const { user: loggedInUser, token } = getStoredSession();
-  const employeeCode = loggedInUser.emp_code || loggedInUser.empCode || '';
-  const footerName        = loggedInUser.employeeName        || loggedInUser.EMPLOYEENAME  || loggedInUser.name     || loggedInUser.username || employeeCode;
-  const footerCode        = loggedInUser.employeeCode        || loggedInUser.EMPLOYEECODE  || loggedInUser.emp_code || employeeCode;
-  const footerDesignation = loggedInUser.employeeDesignation || loggedInUser.DESGFULLNAME  || '';
+  const [currentUser, setCurrentUser] = useState(loggedInUser);
+
+  const employeeCode = currentUser.emp_code || currentUser.empCode || '';
+  const footerName        = currentUser.employeeName        || currentUser.EMPLOYEENAME  || currentUser.name     || currentUser.username || employeeCode;
+  const footerCode        = currentUser.employeeCode        || currentUser.EMPLOYEECODE  || currentUser.emp_code || employeeCode;
+  const footerDesignation = currentUser.employeeDesignation || currentUser.DESGFULLNAME  || '';
+  
   const [activeTab, setActiveTab] = useState('approval-pending');
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Sync user profile from remote DB on mount to get FUNCDESGCODE
+  useEffect(() => {
+    if (!token) return;
+    getCurrentUserProfile()
+      .then(profile => {
+        if (profile && profile.emp_code) {
+          setCurrentUser(profile);
+          setStoredSession(profile, token);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to sync user profile:', err);
+      });
+  }, [token]);
 
   const fetchMyAssets = useCallback(() => {
     setLoading(true);
@@ -50,7 +68,7 @@ export default function User() {
 
   const handleAddAsset = async (newAsset) => {
     try {
-      const payload = { ...newAsset, assigned_to: loggedInUser.id || null, AssetCustodianECNO: newAsset.AssetCustodianECNO || employeeCode };
+      const payload = { ...newAsset, assigned_to: currentUser.id || null, AssetCustodianECNO: newAsset.AssetCustodianECNO || employeeCode };
       const saved = await createAsset(payload);
       setAssets(prev => [...prev, saved]);
       return { success: true };
@@ -67,6 +85,30 @@ export default function User() {
 
   const switchToMyAssets = () => setActiveTab('my-assets');
 
+  // Check if current user is an approver based on FUNCDESGCODE
+  const isApproverDesignation = () => {
+    const code = currentUser.funcdesgcode;
+    if (code === undefined || code === null) return false;
+    const numericCode = Number(code);
+    
+    // Approver/Registrar/Admin designation codes + DD code (40)
+    const ALLOWED_CODES = [
+      40, 20, 30, 50, 55, 60, 61, 65, 70, 105, 
+      300, 310, 400, 500, 501, 510, 530, 540, 
+      550, 560, 600, 2060, 2090, 2091
+    ];
+    return ALLOWED_CODES.includes(numericCode);
+  };
+
+  const showPendingApprovalsTab = currentUser.role === 'Admin' || isApproverDesignation();
+
+  // Redirect if they land on the tab but don't have access
+  useEffect(() => {
+    if (activeTab === 'pending-approvals' && !showPendingApprovalsTab) {
+      setActiveTab('approval-pending');
+    }
+  }, [activeTab, showPendingApprovalsTab]);
+
   return (
     <div className="dashboard-layout">
       <aside className="sidebar glass-panel">
@@ -79,9 +121,13 @@ export default function User() {
           <button className={`nav-item ${activeTab === 'approval-pending' ? 'active' : ''}`} onClick={() => handleTabChange('approval-pending')}>
             <Clock size={20} /><span>Approval Pending List</span>
           </button>
-          <button className={`nav-item ${activeTab === 'pending-approvals' ? 'active' : ''}`} onClick={() => handleTabChange('pending-approvals')}>
-            <ShieldCheck size={20} /><span>Pending Approvals</span>
-          </button>
+          
+          {showPendingApprovalsTab && (
+            <button className={`nav-item ${activeTab === 'pending-approvals' ? 'active' : ''}`} onClick={() => handleTabChange('pending-approvals')}>
+              <ShieldCheck size={20} /><span>Pending Approvals</span>
+            </button>
+          )}
+
           <button className={`nav-item ${activeTab === 'my-assets' ? 'active' : ''}`} onClick={() => handleTabChange('my-assets')}>
             <LayoutDashboard size={20} /><span>My ACMS Systems List</span>
           </button>
@@ -117,7 +163,7 @@ export default function User() {
 
       <main className="dashboard-main-content">
         {activeTab === 'approval-pending'   && <ApprovalPending />}
-        {activeTab === 'pending-approvals'  && <PendingApprovals loggedInUser={loggedInUser} />}
+        {activeTab === 'pending-approvals'  && showPendingApprovalsTab && <PendingApprovals loggedInUser={currentUser} />}
         {activeTab === 'my-assets'          && (
           <MyAssets assets={assets} loading={loading} error={error} employeeCode={employeeCode} onRefresh={fetchMyAssets} />
         )}
