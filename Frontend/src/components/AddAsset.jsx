@@ -689,7 +689,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus({ type: 'loading', message: formMode === 'edit' ? 'Updating asset…' : 'Saving asset…' });
+    setStatus({ type: 'loading', message: 'Saving as draft…' });
 
     const payload = {
       ...formData,
@@ -707,50 +707,43 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
     };
 
     try {
-      if (formMode === 'edit' && editingAsset) {
-        // — UPDATE existing asset
-        await onUpdateAsset(editingAsset.id, payload);
-        // Refresh local ACMS list
-        const refreshed = await getMyAssets();
-        setAcmsAssets(Array.isArray(refreshed) ? refreshed : []);
-        setStatus({ type: 'success', message: '✓ Asset updated successfully!' });
-        setTimeout(() => {
-          setStatus({ type: null, message: '' });
-          setFormMode(null);
-          setEditingAsset(null);
-          setFormData(EMPTY_FORM);
-        }, 2000);
-      } else {
-        // — SAVE AS DRAFT in pending_requests —
-        const draftPayload = {
-          assetNumber:       payload.assetNumber        || '',
-          serialNumber:      payload.serialNumber       || '',
-          category:          payload.CATEGORY           || '',
-          make:              payload.make               || '',
-          model:             payload.model              || '',
-          configuration:     payload.configuration      || '',
-          networkDomain:     payload.networkDomain      || '',
-          ipAddress:         payload.ipAddress          || '',
-          monitor:           payload.Monitor            || '',
-          assetCustodianEcno:payload.AssetCustodianECNO || '',
-          userDivision:      payload.UserDivision       || '',
-          group:             payload.GROUP              || '',
-          area:              payload.AREA               || '',
-          location:          payload.LOCATION           || '',
-          acmsFms:           payload.acmsFms            || '',
-          warranty:          payload.warranty           || 'No',
-          fmsExpiryDate:     payload.fmsExpiryDate      || '',
-        };
-        await requestAssetAdd(draftPayload);
-        setFormData(EMPTY_FORM);
-        setSelectedRecId(null);
-        setSearchQ('');
-        setSearchResults([]);
-        setFormMode(null);
-        setStatus({ type: 'success', message: '✓ Saved as draft! Go to “Ready to Send” section below to send for approval.' });
-        fetchDrafts();
-        setTimeout(() => setStatus({ type: null, message: '' }), 4000);
-      }
+      // Both 'add' and 'edit' modes: save as Draft -> goes through approval workflow
+      const draftPayload = {
+        assetNumber:        payload.assetNumber        || '',
+        serialNumber:       payload.serialNumber       || '',
+        category:           payload.CATEGORY           || '',
+        make:               payload.make               || '',
+        model:              payload.model              || '',
+        configuration:      payload.configuration      || '',
+        networkDomain:      payload.networkDomain      || '',
+        ipAddress:          payload.ipAddress          || '',
+        monitor:            payload.Monitor            || '',
+        assetCustodianEcno: payload.AssetCustodianECNO || '',
+        userDivision:       payload.UserDivision       || '',
+        group:              payload.GROUP              || '',
+        area:               payload.AREA               || '',
+        location:           payload.LOCATION           || '',
+        acmsFms:            payload.acmsFms            || '',
+        warranty:           payload.warranty           || 'No',
+        fmsExpiryDate:      payload.fmsExpiryDate      || '',
+        sourceAssetId:      formMode === 'edit' && editingAsset ? editingAsset.id : null,
+      };
+      await requestAssetAdd(draftPayload);
+      setFormData(EMPTY_FORM);
+      setSelectedRecId(null);
+      setSearchQ('');
+      setSearchResults([]);
+      setFormMode(null);
+      setEditingAsset(null);
+      const successMsg = formMode === 'edit'
+        ? '✓ Saved as draft! Your updated asset details are in the "Ready to Send" section below — select it and send for approval.'
+        : '✓ Saved as draft! Go to "Ready to Send" section below to send for approval.';
+      setStatus({ type: 'success', message: successMsg });
+      fetchDrafts();
+      setTimeout(() => {
+        document.getElementById('ready-to-send-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 400);
+      setTimeout(() => setStatus({ type: null, message: '' }), 5000);
     } catch (err) {
       setStatus({ type: 'error', message: err.message || 'Operation failed. Please try again.' });
     }
@@ -1199,12 +1192,12 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
             <div>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
                 {formMode === 'edit'
-                  ? `✏️ Edit Asset: ${editingAsset?.assetNumber || editingAsset?.serialNumber || 'Asset'}`
+                  ? `✏️ Request Update: ${editingAsset?.assetNumber || editingAsset?.serialNumber || 'Asset'}`
                   : '➕ Add New System'}
               </h3>
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                 {formMode === 'edit'
-                  ? 'Update the fields below and click Update Asset.'
+                  ? 'Update the fields below and click "Save as Draft" — it will appear in the Ready to Send section for approval.'
                   : 'Fields pre-filled from COINS. Complete remaining details.'}
               </p>
             </div>
@@ -1498,10 +1491,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
         <div className="form-actions">
             <button type="submit" className="submit-btn login-btn" disabled={status.type === 'loading'}>
               <Save size={18} />
-              <span>{status.type === 'loading'
-                ? (formMode === 'edit' ? 'Updating…' : 'Saving Draft…')
-                : (formMode === 'edit' ? 'Update Asset' : 'Save as Draft')}
-              </span>
+              <span>{status.type === 'loading' ? 'Saving Draft…' : 'Save as Draft'}</span>
             </button>
         </div>
 
@@ -1511,7 +1501,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
 
       {/* ══ READY TO SEND APPROVAL REQUEST SECTION ═══════════════════════════ */}
       {activeTabMode === 'add-asset' && (
-        <div className="glass-panel" style={{ marginTop: '2rem', padding: '1.4rem' }}>
+        <div id="ready-to-send-section" className="glass-panel" style={{ marginTop: '2rem', padding: '1.4rem' }}>
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
