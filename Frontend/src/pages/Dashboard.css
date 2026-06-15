@@ -1251,3 +1251,326 @@ textarea.login-input {
   color: var(--accent-primary);
   font-family: monospace;
 }
+
+/* ============================================================
+   WHERE IS MY ASSET — section styles
+   ============================================================ */
+.wima-wrapper {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Header */
+.wima-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.wima-header-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(108,92,231,0.35);
+}
+
+.wima-title {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.wima-subtitle {
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* Search card */
+.wima-search-card {
+  padding: 1.5rem 1.75rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.wima-search-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.wima-search-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.wima-search-icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--accent-primary);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.wima-search-input {
+  width: 100%;
+  padding: 0.85rem 2.8rem 0.85rem 3rem;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-base);
+  color: var(--text-main);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.wima-search-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+
+.wima-search-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(108,92,231,0.15);
+}
+
+.wima-clear-btn {
+  position: absolute;
+  right: 0.85rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0.2rem;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.wima-clear-btn:hover { color: var(--accent-primary); }
+
+.wima-spinner {
+  display: flex;
+  align-items: center;
+  color: var(--accent-primary);
+}
+
+.wima-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Results meta */
+.wima-results-meta {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  padding: 0 0.25rem;
+}
+.wima-results-meta strong { color: var(--accent-primary); }
+.wima-results-meta em { font-style: normal; color: var(--text-main); font-weight: 600; }
+
+/* Results grid */
+.wima-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Result card */
+.wima-card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.wima-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(108,92,231,0.18);
+}
+
+.wima-card-header {
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, rgba(108,92,231,0.08), rgba(162,155,254,0.06));
+  display: flex;
+  align-items: center;
+}
+
+.wima-card-serial-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  font-family: monospace;
+  letter-spacing: 0.03em;
+}
+
+.wima-card-body {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.wima-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.wima-field-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.wima-field-value {
+  font-size: 0.92rem;
+  color: var(--text-main);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.wima-description-text {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.wima-custodian-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(108,92,231,0.12);
+  color: var(--accent-primary);
+  font-family: monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.wima-na {
+  color: var(--text-muted);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+/* Error */
+.wima-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius-md);
+  color: #e17055;
+  border: 1px solid rgba(225,112,85,0.3);
+  font-size: 0.93rem;
+}
+
+/* Empty state */
+.wima-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 2rem;
+  border-radius: var(--radius-lg);
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.wima-empty-icon {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.wima-empty-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.wima-empty-sub {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Idle state */
+.wima-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  border-radius: var(--radius-lg);
+  text-align: center;
+  gap: 1rem;
+  border: 2px dashed var(--border-color);
+  background: transparent;
+  box-shadow: none;
+}
+
+.wima-idle-icon {
+  color: var(--accent-primary);
+  opacity: 0.35;
+  animation: pulse-icon 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.06); }
+}
+
+.wima-idle-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.wima-idle-sub {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Spinner animation (reuse) */
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

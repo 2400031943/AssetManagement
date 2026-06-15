@@ -143,7 +143,7 @@ class AcmsList2027(db.Model):
 class PendingRequest(db.Model):
     """
     Approval workflow for adding a system to the ACMS list.
-    Flow: Submitted → Approver → Registrar → DD → Admin → Approved
+    Flow: Submitted → Approver → Area Focal Point → DD → Admin → Approved
     Can be Withdrawn by the requester or Rejected at any level.
     """
     __tablename__ = 'pending_requests'
@@ -192,7 +192,7 @@ class PendingRequest(db.Model):
     approver_name        = db.Column(db.String(100), nullable=True)
     approver_remarks     = db.Column(db.Text,        nullable=True)
     approver_action_at   = db.Column(db.DateTime,    nullable=True)
-    # Level 2 — Registrar (auto-assigned by division/area)
+    # Level 2 — Area Focal Point (auto-assigned by division/area)
     registrar_ecno       = db.Column(db.String(50),  nullable=True)
     registrar_name       = db.Column(db.String(100), nullable=True)
     registrar_remarks    = db.Column(db.Text,        nullable=True)

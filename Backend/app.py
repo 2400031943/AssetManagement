@@ -433,12 +433,12 @@ def create_app(config_class=Config):
     # ===========================================================================
     # APPROVAL WORKFLOW — PENDING REQUESTS
     # ===========================================================================
-    # Flow: Submitted → Approver Approved → Registrar Approved → DD Approved → Approved
-    # The requester manually selects Approver, Registrar, and DD from dropdowns.
+    # Flow: Submitted → Approver Approved → Area Focal Point Approved → DD Approved → Approved
+    # The requester manually selects Approver, Area Focal Point, and DD from dropdowns.
     # ===========================================================================
 
     # ── FUNCDESGCODE sets ────────────────────────────────────────────────────
-    # Approver / Registrar / Admin share these designation codes
+    # Approver / Area Focal Point / Admin share these designation codes
     APPROVAL_FUNC_CODES = (
         400, 500, 300, 310, 510, 30, 20, 50, 55, 60,
         61, 65, 70, 105, 501, 530, 540, 550, 560, 600,
@@ -449,53 +449,69 @@ def create_app(config_class=Config):
 
     def _fetch_personnel_from_remote(func_codes):
         """
-        Query TBAD_EMPFUNCDESG_VIEW joined with VIEWEMPINFO from cowmis.
-        Returns list of {ecno, name, designation} for the given FUNCDESGCODE(s).
-        Returns [] gracefully if remote DB is unreachable.
+        Query TBAD_EMPFUNCDESG_VIEW joined with VIEWEMPINFO from the remote cowmis DB.
+        Returns list of {ecno, name, designation, code} for the given FUNCDESGCODE(s).
+
+        Columns used:
+          TBAD_EMPFUNCDESG_VIEW : EMPLOYEECODE, FUNCDESGDES, FUNCDESGCODE
+          VIEWEMPINFO           : EMPLOYEENAME
+
+        Returns [] gracefully if the remote DB is unreachable or the query fails.
         """
         remote_engine = db.engines.get('remote_pis')
         if not remote_engine:
+            print('[WARN] remote_pis engine not configured — cannot fetch personnel')
             return []
 
-        # Build the IN (...) clause safely with numbered placeholders
+        # Accept a single int or a tuple/list of ints
         if isinstance(func_codes, int):
             func_codes = (func_codes,)
 
+        # Build safe numbered placeholders  :c0, :c1, …
         placeholders = ', '.join(f':c{i}' for i in range(len(func_codes)))
         params = {f'c{i}': v for i, v in enumerate(func_codes)}
 
         query = text(f"""
             SELECT DISTINCT
-                LTRIM(RTRIM(e.EMPLOYEECODE))  AS ecno,
-                LTRIM(RTRIM(v.EMPLOYEENAME))  AS name,
-                LTRIM(RTRIM(e.FUNCDESGDES))   AS designation,
-                e.FUNCDESGCODE                AS code
+                LTRIM(RTRIM(CAST(e.EMPLOYEECODE  AS NVARCHAR(50))))  AS ecno,
+                LTRIM(RTRIM(CAST(v.EMPLOYEENAME  AS NVARCHAR(200)))) AS name,
+                LTRIM(RTRIM(CAST(e.FUNCDESGDES   AS NVARCHAR(200)))) AS designation,
+                e.FUNCDESGCODE                                        AS code
             FROM TBAD_EMPFUNCDESG_VIEW e
-            INNER JOIN TBAD_EMPLOYEE emp
-                ON LTRIM(RTRIM(emp.EMPLOYEECODE)) = LTRIM(RTRIM(e.EMPLOYEECODE))
-               AND LTRIM(RTRIM(emp.SERVICESTATCODE)) = 'SERV'
             LEFT JOIN VIEWEMPINFO v
-                ON LTRIM(RTRIM(v.EMPLOYEECODE)) = LTRIM(RTRIM(e.EMPLOYEECODE))
+                ON LTRIM(RTRIM(CAST(v.EMPLOYEECODE AS NVARCHAR(50))))
+                 = LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50))))
             WHERE e.FUNCDESGCODE IN ({placeholders})
-            ORDER BY v.EMPLOYEENAME
+              AND LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50)))) <> ''
+            ORDER BY v.EMPLOYEENAME, e.EMPLOYEECODE
         """)
 
         try:
             with remote_engine.connect() as conn:
                 rows = conn.execute(query, params).mappings().all()
-            return [
-                {
-                    'ecno':        row.get('ecno') or '',
-                    'name':        row.get('name') or row.get('ecno') or '',
-                    'designation': row.get('designation') or '',
-                    'code':        row.get('code'),
-                }
-                for row in rows
-                if row.get('ecno')
-            ]
+
+            result = []
+            for row in rows:
+                ecno = (row.get('ecno') or '').strip()
+                if not ecno:
+                    continue
+                name        = (row.get('name')        or '').strip() or ecno
+                designation = (row.get('designation') or '').strip()
+                code        = row.get('code')
+                result.append({
+                    'ecno':        ecno,
+                    'name':        name,
+                    'designation': designation,
+                    'code':        code,
+                })
+
+            print(f'[INFO] _fetch_personnel_from_remote: codes={func_codes} → {len(result)} records')
+            return result
+
         except Exception as e:
             print(f'[WARN] Could not fetch personnel from remote cowmis: {e}')
             return []
+
 
     @app.route('/api/assets/approvers', methods=['GET'])
     @jwt_required()
@@ -510,7 +526,7 @@ def create_app(config_class=Config):
     @jwt_required()
     def get_registrars():
         """
-        Return personnel list for Registrar dropdown.
+        Return personnel list for Area Focal Point dropdown.
         Source: same as approvers — FUNCDESGCODE IN APPROVAL_FUNC_CODES.
         """
         return jsonify(_fetch_personnel_from_remote(APPROVAL_FUNC_CODES)), 200
@@ -624,7 +640,7 @@ def create_app(config_class=Config):
         dd_ecno        = (data.get('ddEcno') or '').strip()
 
         if not approver_ecno or not registrar_ecno or not dd_ecno:
-            return jsonify({'error': 'Approver, Registrar and DD must all be selected.'}), 400
+            return jsonify({'error': 'Approver, Area Focal Point and DD must all be selected.'}), 400
 
         submitted_count = 0
         errors = []
@@ -663,8 +679,8 @@ def create_app(config_class=Config):
         """
         Return pending requests that are currently awaiting MY action.
         - Level 1 (Submitted):         I am the Approver
-        - Level 2 (Approver Approved): I am the Registrar
-        - Level 3 (Registrar Approved):I am the DD
+        - Level 2 (Approver Approved): I am the Area Focal Point
+        - Level 3 (Area Focal Point Approved):I am the DD
         - Level 4 (DD Approved):       I am an Admin (role='Admin')
         """
         from sqlalchemy import or_, and_
@@ -1096,16 +1112,23 @@ def create_app(config_class=Config):
             print(f"Failed to fetch recommendations from remote cowmis DB: {e}")
             return jsonify([]), 200
 
-        # — Filter out assets already saved in ACMS_list_2027 —
+        # — Filter out assets already saved in dbo.assets (2026 ACMS list) OR ACMS_list_2027 —
         try:
-            existing_serials = {
-                row.serial_number
-                for row in AcmsList2027.query.with_entities(AcmsList2027.serial_number).all()
-                if row.serial_number
-            }
-            remote_assets = [a for a in remote_assets if a.get('serialNumber') not in existing_serials]
+            existing_serials = set()
+            # 2026 ACMS list (dbo.assets)
+            for row in Asset.query.with_entities(Asset.serial_number).all():
+                if row.serial_number:
+                    existing_serials.add(row.serial_number.strip())
+            # 2027 ACMS list (dbo.ACMS_list_2027)
+            for row in AcmsList2027.query.with_entities(AcmsList2027.serial_number).all():
+                if row.serial_number:
+                    existing_serials.add(row.serial_number.strip())
+            remote_assets = [
+                a for a in remote_assets
+                if (a.get('serialNumber') or '').strip() not in existing_serials
+            ]
         except Exception as fe:
-            print(f'[WARN] Could not filter by ACMS_list_2027: {fe}')  # table may not exist here
+            print(f'[WARN] Could not filter by ACMS lists: {fe}')  # table may not exist here
 
         return jsonify(remote_assets), 200
 
@@ -1152,21 +1175,79 @@ def create_app(config_class=Config):
                 for i, row in enumerate(rows)
             ]
 
-            # — Filter out serial numbers already in ACMS_list_2027 —
+            # — Filter out serial numbers already in dbo.assets (2026) OR ACMS_list_2027 —
             try:
-                existing_serials = {
-                    row.serial_number
-                    for row in AcmsList2027.query.with_entities(AcmsList2027.serial_number).all()
-                    if row.serial_number
-                }
-                results = [r for r in results if r.get('serialNumber') not in existing_serials]
+                existing_serials = set()
+                # 2026 ACMS list (dbo.assets)
+                for row in Asset.query.with_entities(Asset.serial_number).all():
+                    if row.serial_number:
+                        existing_serials.add(row.serial_number.strip())
+                # 2027 ACMS list (dbo.ACMS_list_2027)
+                for row in AcmsList2027.query.with_entities(AcmsList2027.serial_number).all():
+                    if row.serial_number:
+                        existing_serials.add(row.serial_number.strip())
+                results = [
+                    r for r in results
+                    if (r.get('serialNumber') or '').strip() not in existing_serials
+                ]
             except Exception as fe:
-                print(f'[WARN] Could not filter search by ACMS_list_2027: {fe}')
+                print(f'[WARN] Could not filter search by ACMS lists: {fe}')
 
             return jsonify(results), 200
 
         except Exception as e:
             print(f"ERROR: TBST_ASSETS search failed: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    # ===========================================================================
+    # WHERE IS MY ASSET — search TBST_ASSETS by serial number (open to all users)
+    # ===========================================================================
+    @app.route('/api/assets/where-is-my-asset', methods=['GET'])
+    @jwt_required()
+    def where_is_my_asset():
+        """
+        Search TBST_ASSETS in the remote cowmis DB by EQSRLNO (serial number).
+        Returns ASSETNO, EQSRLNO, EQPTDESCP, ACUSTODIAN.
+        GET /api/assets/where-is-my-asset?q=SRL123
+        """
+        q = request.args.get('q', '').strip()
+        if not q:
+            return jsonify([]), 200
+
+        remote_engine = db.engines.get('remote_pis')
+        if not remote_engine:
+            return jsonify({'error': 'Remote database (remote_pis) is not configured on this server.'}), 503
+
+        try:
+            query = text(f"""
+                SELECT TOP 50
+                    NULLIF(LTRIM(RTRIM(CAST([{COWMIS_ASSETNO_COL}]       AS NVARCHAR(255)))), '') AS asset_number,
+                    NULLIF(LTRIM(RTRIM(CAST([{COWMIS_SERIAL_COL}]         AS NVARCHAR(255)))), '') AS serial_number,
+                    NULLIF(LTRIM(RTRIM(CAST([{COWMIS_DESCRIPTION_COL}]    AS NVARCHAR(MAX)))),  '') AS configuration,
+                    NULLIF(LTRIM(RTRIM(CAST([{COWMIS_CUSTODIAN_COL}]      AS NVARCHAR(50)))),  '') AS custodian
+                FROM [{COWMIS_ASSETS_TABLE}]
+                WHERE [{COWMIS_SERIAL_COL}] LIKE :q
+                ORDER BY [{COWMIS_SERIAL_COL}]
+            """)
+            with remote_engine.connect() as conn:
+                rows = conn.execute(query, {'q': f'%{q}%'}).mappings().all()
+
+            results = [
+                {
+                    'id':           f'WIMA-{i+1}',
+                    'assetNumber':  row.get('asset_number')  or '',
+                    'serialNumber': row.get('serial_number') or '',
+                    'description':  row.get('configuration') or '',
+                    'custodian':    row.get('custodian')     or '',
+                }
+                for i, row in enumerate(rows)
+            ]
+
+            print(f"INFO: where-is-my-asset query='{q}' returned {len(results)} rows")
+            return jsonify(results), 200
+
+        except Exception as e:
+            print(f"ERROR: where-is-my-asset search failed: {e}")
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/assets', methods=['POST'])

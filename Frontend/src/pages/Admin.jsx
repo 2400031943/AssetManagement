@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Database, Users, Server, Activity, LayoutDashboard, Monitor, Laptop } from 'lucide-react';
+import { LogOut, Database, Users, Server, Activity, LayoutDashboard, Monitor, Laptop, MapPin } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getAllUsers, getAllAssets } from '../api';
 import { getStoredUser, clearStoredSession } from '../authSession';
 import AdminUsers from '../components/AdminUsers';
 import AdminAssets from '../components/AdminAssets';
 import MyAssets from '../components/MyAssets';
+import WhereIsMyAsset from '../components/WhereIsMyAsset';
 import './Dashboard.css';
 
 export default function Admin() {
@@ -78,6 +79,9 @@ export default function Admin() {
           <button className={`nav-item ${activeTab === 'my-assets' ? 'active' : ''}`} onClick={() => handleTabChange('my-assets')}>
             <Laptop size={20} /><span>My ACMS Systems List</span>
           </button>
+          <button className={`nav-item ${activeTab === 'where-is-my-asset' ? 'active' : ''}`} onClick={() => handleTabChange('where-is-my-asset')}>
+            <MapPin size={20} /><span>Where is my Asset?</span>
+          </button>
         </nav>
 
         <div className="sidebar-footer">
@@ -131,6 +135,7 @@ export default function Admin() {
         {activeTab === 'my-assets' && (
           <MyAssets assets={myAssets} loading={loading} />
         )}
+        {activeTab === 'where-is-my-asset' && <WhereIsMyAsset />}
       </main>
     </div>
   );

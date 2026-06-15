@@ -3,6 +3,7 @@ import { LogOut, Database, Users, Monitor, ArrowLeft, Search, Filter, Eye, FileT
 import { useNavigate } from '../routes';
 import { getUsersByArea, getAssetsByArea } from '../api';
 import { getStoredUser, clearStoredSession } from '../authSession';
+import WhereIsMyAsset from '../components/WhereIsMyAsset';
 import './Dashboard.css';
 
 export default function AreaAdmin() {
@@ -87,6 +88,10 @@ export default function AreaAdmin() {
           <button className={`nav-item ${activeTab === 'assets' && !selectedUserId ? 'active' : ''}`}
             onClick={() => { setActiveTab('assets'); setSelectedUserId(null); setSearchTerm(''); }}>
             <Monitor size={20} /><span>All Area Assets</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'where-is-my-asset' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('where-is-my-asset'); setSelectedUserId(null); setSearchTerm(''); }}>
+            <MapPin size={20} /><span>Where is my Asset?</span>
           </button>
         </nav>
 
@@ -219,6 +224,7 @@ export default function AreaAdmin() {
             )}
           </div>
         )}
+        {activeTab === 'where-is-my-asset' && <WhereIsMyAsset />}
       </main>
     </div>
   );

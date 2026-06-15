@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LogOut, Database, LayoutDashboard, PlusCircle, Sparkles, Clock, ShieldCheck } from 'lucide-react';
+import { LogOut, Database, LayoutDashboard, PlusCircle, Sparkles, Clock, ShieldCheck, MapPin } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getMyAssets, createAsset, updateAsset, getCurrentUserProfile } from '../api';
 import { getStoredSession, clearStoredSession, setStoredSession } from '../authSession';
@@ -7,6 +7,7 @@ import MyAssets from '../components/MyAssets';
 import AddAsset from '../components/AddAsset';
 import ApprovalPending from '../components/ApprovalPending';
 import PendingApprovals from '../components/PendingApprovals';
+import WhereIsMyAsset from '../components/WhereIsMyAsset';
 import './Dashboard.css';
 
 export default function User() {
@@ -137,6 +138,9 @@ export default function User() {
           <button className={`nav-item ${activeTab === 'coins-recommendations' ? 'active' : ''}`} onClick={() => handleTabChange('coins-recommendations')}>
             <Sparkles size={20} /><span>COINS Recommendations</span>
           </button>
+          <button className={`nav-item ${activeTab === 'where-is-my-asset' ? 'active' : ''}`} onClick={() => handleTabChange('where-is-my-asset')}>
+            <MapPin size={20} /><span>Where is my Asset?</span>
+          </button>
         </nav>
 
         {employeeCode && (
@@ -176,6 +180,7 @@ export default function User() {
             setActiveTab={setActiveTab}
           />
         )}
+        {activeTab === 'where-is-my-asset' && <WhereIsMyAsset />}
       </main>
     </div>
   );

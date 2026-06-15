@@ -7,7 +7,7 @@ import '../pages/Dashboard.css';
 const STATUS_CONFIG = {
   'Submitted':          { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: Clock,          label: 'Submitted' },
   'Approver Approved':  { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  icon: CheckCircle2,   label: 'Approver Approved' },
-  'Registrar Approved': { color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: CheckCircle2,   label: 'Registrar Approved' },
+  'Registrar Approved': { color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: CheckCircle2,   label: 'Area Focal Point Approved' },
   'DD Approved':        { color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: CheckCircle2,   label: 'DD Approved' },
   'Approved':           { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',   icon: CheckCircle2,   label: 'Fully Approved' },
   'Rejected':           { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: XCircle,        label: 'Rejected' },
@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
 // ─── Progress steps ────────────────────────────────────────────────────────
 const LEVELS = [
   { level: 1, label: 'Approver' },
-  { level: 2, label: 'Registrar' },
+  { level: 2, label: 'Area Focal Point' },
   { level: 3, label: 'DD' },
   { level: 4, label: 'Admin' },
 ];
@@ -157,7 +157,7 @@ function RequestCard({ req, onWithdraw }) {
       <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {[
           { label: 'Approver', ecno: req.approverEcno, name: req.approverName, remarks: req.approverRemarks, at: req.approverActionAt },
-          { label: 'Registrar', ecno: req.registrarEcno, name: req.registrarName, remarks: req.registrarRemarks, at: req.registrarActionAt },
+          { label: 'Area Focal Point', ecno: req.registrarEcno, name: req.registrarName, remarks: req.registrarRemarks, at: req.registrarActionAt },
           { label: 'DD', ecno: req.ddEcno, name: req.ddName, remarks: req.ddRemarks, at: req.ddActionAt },
         ].map(lvl => lvl.ecno && (
           <span key={lvl.label} style={{

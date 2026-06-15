@@ -167,7 +167,7 @@ function AssignedCard({ req, myRole, onAction }) {
 function levelLabel(req, myEcno, isAdmin) {
   const ecno = (myEcno || '').trim().toUpperCase();
   if (req.status === 'Submitted'           && (req.approverEcno  || '').trim().toUpperCase() === ecno) return 'Approver';
-  if (req.status === 'Approver Approved'   && (req.registrarEcno || '').trim().toUpperCase() === ecno) return 'Registrar';
+  if (req.status === 'Approver Approved'   && (req.registrarEcno || '').trim().toUpperCase() === ecno) return 'Area Focal Point';
   if (req.status === 'Registrar Approved'  && (req.ddEcno        || '').trim().toUpperCase() === ecno) return 'Deputy Director';
   if (req.status === 'DD Approved'         && isAdmin) return 'Admin';
   return 'Reviewer';
@@ -200,7 +200,7 @@ export default function PendingApprovals({ loggedInUser }) {
             <ShieldCheck size={24} style={{ color: '#6c63ff' }} /> Pending Approvals
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Requests waiting for your action as Approver, Registrar, DD or Admin.
+            Requests waiting for your action as Approver, Area Focal Point, DD or Admin.
           </p>
         </div>
         <button onClick={fetch} style={{

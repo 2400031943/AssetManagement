@@ -1,7 +1,170 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard, ListChecks, Send, ChevronDown, Trash2 } from 'lucide-react';
-import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets, checkSerialInLists, requestAssetAdd, getDraftRequests, submitPendingRequests, getApprovers, getRegistrars, getDDs } from '../api';
+import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard, ListChecks, Send, ChevronDown, Trash2, User } from 'lucide-react';
+import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets, checkSerialInLists, requestAssetAdd, getDraftRequests, getPendingRequests, submitPendingRequests, getApprovers, getRegistrars, getDDs } from '../api';
 import '../pages/Dashboard.css';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SearchablePersonSelect  — searchable dropdown for Approver / AFP / DD
+// Props: label, list [{ecno, name, designation}], selected, setter, stopPropOnClick
+// ─────────────────────────────────────────────────────────────────────────────
+function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick = false }) {
+  const [open, setOpen]     = React.useState(false);
+  const [query, setQuery]   = React.useState('');
+  const wrapRef             = React.useRef(null);
+
+  // Close on outside click
+  React.useEffect(() => {
+    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = query.trim()
+    ? list.filter(p =>
+        (p.name        || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.ecno        || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.designation || '').toLowerCase().includes(query.toLowerCase())
+      )
+    : list;
+
+  const handleSelect = (person) => {
+    setter(person);
+    setOpen(false);
+    setQuery('');
+  };
+
+  const handleClear = (e) => {
+    if (stopPropOnClick) e.stopPropagation();
+    setter(null);
+    setQuery('');
+    setOpen(false);
+  };
+
+  const handleToggle = (e) => {
+    if (stopPropOnClick) e.stopPropagation();
+    setOpen(v => !v);
+  };
+
+  const baseBox = {
+    width: '100%', padding: '0.42rem 2.2rem 0.42rem 0.7rem',
+    background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.18)',
+    borderRadius: 7, color: '#e2e8f0', fontSize: '0.82rem', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    position: 'relative', userSelect: 'none', minHeight: '2rem',
+    transition: 'border-color 0.2s',
+    ...(open ? { borderColor: 'var(--accent-primary, #6c63ff)' } : {}),
+  };
+
+  return (
+    <div ref={wrapRef} style={{ marginBottom: '0.75rem', position: 'relative' }}>
+      <label style={{ display: 'block', fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: '0.28rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+        {label}
+      </label>
+
+      {/* Trigger button */}
+      <div style={baseBox} onClick={handleToggle}>
+        {selected ? (
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+            <span style={{ fontWeight: 700, color: '#a5b4fc' }}>{selected.ecno}</span>
+            {' · '}{selected.name}
+            {selected.designation && <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72rem' }}> · {selected.designation}</span>}
+          </span>
+        ) : (
+          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem' }}>-- Select {label} --</span>
+        )}
+        <span style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 2 }}>
+          {selected && (
+            <span onClick={handleClear} title="Clear" style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', padding: '0 2px' }}>✕</span>
+          )}
+          <ChevronDown size={13} style={{ color: 'rgba(255,255,255,0.4)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        </span>
+      </div>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div
+          onClick={stopPropOnClick ? e => e.stopPropagation() : undefined}
+          style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 9999,
+            background: '#1e1b2e', border: '1.5px solid rgba(108,99,255,0.4)',
+            borderRadius: 9, boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
+            maxHeight: 260, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}
+        >
+          {/* Search input */}
+          <div style={{ padding: '0.5rem 0.65rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Search size={13} style={{ color: 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
+            <input
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onClick={stopPropOnClick ? e => e.stopPropagation() : undefined}
+              placeholder={`Search ${label}…`}
+              style={{
+                flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                color: '#e2e8f0', fontSize: '0.8rem',
+              }}
+            />
+            {query && <span onClick={() => setQuery('')} style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>✕</span>}
+          </div>
+
+          {/* Options list */}
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {list.length === 0 && (
+              <div style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+                No personnel available (remote DB may be offline)
+              </div>
+            )}
+            {filtered.length === 0 && list.length > 0 && (
+              <div style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+                No matches for "{query}"
+              </div>
+            )}
+            {filtered.map(p => (
+              <div
+                key={p.ecno}
+                onClick={() => handleSelect(p)}
+                style={{
+                  padding: '0.55rem 0.85rem', cursor: 'pointer', fontSize: '0.8rem',
+                  background: selected?.ecno === p.ecno ? 'rgba(108,99,255,0.18)' : 'transparent',
+                  borderLeft: selected?.ecno === p.ecno ? '3px solid var(--accent-primary, #6c63ff)' : '3px solid transparent',
+                  transition: 'background 0.15s',
+                  display: 'flex', flexDirection: 'column', gap: 1,
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
+                onMouseLeave={e => e.currentTarget.style.background = selected?.ecno === p.ecno ? 'rgba(108,99,255,0.18)' : 'transparent'}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#a5b4fc', fontSize: '0.78rem' }}>{p.ecno}</span>
+                  <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{p.name}</span>
+                </span>
+                {p.designation && (
+                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.42)', paddingLeft: 2 }}>{p.designation}</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Footer count */}
+          {list.length > 0 && (
+            <div style={{ padding: '0.3rem 0.85rem', borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: '0.68rem', color: 'rgba(255,255,255,0.28)' }}>
+              {filtered.length} of {list.length} shown
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Selection confirmation */}
+      {selected && (
+        <div style={{ marginTop: '0.22rem', fontSize: '0.7rem', color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <CheckCircle2 size={11} />
+          <span>{selected.name} · <span style={{ fontFamily: 'monospace' }}>{selected.ecno}</span></span>
+          {selected.designation && <span style={{ color: 'rgba(255,255,255,0.38)' }}>· {selected.designation}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: map a COINS recommendation → form field values
@@ -93,7 +256,7 @@ function RecommendationCard({ rec, isSelected, onClick, approversList, registrar
   const handleRequestAdd = async (e) => {
     e.stopPropagation();
     if (!selApprover || !selRegistrar || !selDD) {
-      alert('Please select Approver, Registrar and Deputy Director.');
+      alert('Please select Approver, Area Focal Point and Deputy Director.');
       return;
     }
     setSubmitting(true);
@@ -109,27 +272,9 @@ function RecommendationCard({ rec, isSelected, onClick, approversList, registrar
     }
   };
 
+  // Uses the top-level SearchablePersonSelect with stopPropOnClick=true (inside card)
   const PersonDropdown = ({ label, list, selected, setter }) => (
-    <div style={{ marginBottom: '0.65rem' }}>
-      <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>{label}</label>
-      <select
-        value={selected ? selected.ecno : ''}
-        onChange={e => setter(list.find(p => p.ecno === e.target.value) || null)}
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '100%', padding: '0.4rem 0.6rem',
-          background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.15)',
-          borderRadius: 7, color: '#e2e8f0', fontSize: '0.8rem', cursor: 'pointer',
-        }}
-      >
-        <option value="">-- Select {label} --</option>
-        {list.length === 0 && <option disabled>No personnel (remote DB offline)</option>}
-        {list.map(p => (
-          <option key={p.ecno} value={p.ecno}>{p.name} — {p.designation} ({p.ecno})</option>
-        ))}
-      </select>
-      {selected && <div style={{ marginTop: '0.2rem', fontSize: '0.7rem', color: '#a5b4fc' }}>✓ {selected.name} · {selected.ecno}</div>}
-    </div>
+    <SearchablePersonSelect label={label} list={list} selected={selected} setter={setter} stopPropOnClick={true} />
   );
 
   return (
@@ -202,10 +347,10 @@ function RecommendationCard({ rec, isSelected, onClick, approversList, registrar
           }}
         >
           <p style={{ margin: '0 0 0.7rem', fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 600 }}>
-            Select Approver, Registrar &amp; DD to request adding this system to ACMS 2027 list:
+            Select Approver, Area Focal Point &amp; DD to request adding this system to ACMS 2027 list:
           </p>
           <PersonDropdown label="Approver"             list={approversList}  selected={selApprover}  setter={setSelApprover} />
-          <PersonDropdown label="Registrar"            list={registrarsList} selected={selRegistrar} setter={setSelRegistrar} />
+          <PersonDropdown label="Area Focal Point"            list={registrarsList} selected={selRegistrar} setter={setSelRegistrar} />
           <PersonDropdown label="Deputy Director (DD)" list={ddsList}        selected={selDD}        setter={setSelDD} />
           <button
             type="button"
@@ -511,14 +656,59 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
   const [acms2027, setAcms2027]           = useState([]);
   const [acms2027Loading, setAcms2027Loading] = useState(true);
 
+  // ── Pending requests (for exclusion filtering)
+  const [pendingRequests, setPendingRequests] = useState([]);
+
   // ── Search state
   const [searchQ, setSearchQ]             = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching]         = useState(false);
   const searchTimer                       = useRef(null);
 
-  // Derived: what COINS cards to show
-  const recommendations = searchQ.trim() ? searchResults : myRecs;
+  // ── Exclusion sets derived from drafts and pending requests
+  // Items in drafts OR pending should not appear in 2026 ACMS Recommendations
+  const draftAndPendingSerials = React.useMemo(() => {
+    const all = [...drafts, ...pendingRequests];
+    return new Set(
+      all.map(r => (r.serialNumber || '').trim().toUpperCase()).filter(Boolean)
+    );
+  }, [drafts, pendingRequests]);
+
+  const draftAndPendingAssets = React.useMemo(() => {
+    const all = [...drafts, ...pendingRequests];
+    return new Set(
+      all.map(r => (r.assetNumber || '').trim().toUpperCase()).filter(Boolean)
+    );
+  }, [drafts, pendingRequests]);
+
+  // Items in pending (submitted/in-review) should not appear in COINS Recommendations
+  const pendingSerials = React.useMemo(() => new Set(
+    pendingRequests.map(r => (r.serialNumber || '').trim().toUpperCase()).filter(Boolean)
+  ), [pendingRequests]);
+
+  const pendingAssets = React.useMemo(() => new Set(
+    pendingRequests.map(r => (r.assetNumber || '').trim().toUpperCase()).filter(Boolean)
+  ), [pendingRequests]);
+
+  // Helper: is an item blocked from 2026 ACMS list (in drafts or pending)?
+  const isInDraftOrPending = (item) => {
+    const serial = (item.serialNumber || '').trim().toUpperCase();
+    const asset  = (item.assetNumber  || '').trim().toUpperCase();
+    return (serial && draftAndPendingSerials.has(serial)) ||
+           (asset  && draftAndPendingAssets.has(asset));
+  };
+
+  // Helper: is an item blocked from COINS list (in pending approval)?
+  const isInPending = (item) => {
+    const serial = (item.serialNumber || '').trim().toUpperCase();
+    const asset  = (item.assetNumber  || '').trim().toUpperCase();
+    return (serial && pendingSerials.has(serial)) ||
+           (asset  && pendingAssets.has(asset));
+  };
+
+  // Derived: what COINS cards to show — excluding items already in pending approval
+  const baseRecs = searchQ.trim() ? searchResults : myRecs;
+  const recommendations = baseRecs.filter(rec => !isInPending(rec));
 
   // ── Pagination ───────────────────────────────────────────────────────────
   const CARDS_PER_PAGE = 4;
@@ -672,6 +862,12 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
       .finally(() => setDraftsLoading(false));
   };
 
+  const fetchPending = () => {
+    getPendingRequests()
+      .then(data => setPendingRequests(Array.isArray(data) ? data : []))
+      .catch(() => setPendingRequests([]));
+  };
+
   // ── Load dropdowns once (on mount)
   useEffect(() => {
     setDropdownsLoading(true);
@@ -686,6 +882,8 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
   }, []);
 
   useEffect(() => { fetchDrafts(); }, []);
+
+  useEffect(() => { fetchPending(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -761,7 +959,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
   // ── Send selected drafts for approval
   const handleSendForApproval = async () => {
     if (!selectedApprover || !selectedRegistrar || !selectedDD) {
-      alert('Please select Approver, Registrar and DD before sending.');
+      alert('Please select Approver, Area Focal Point and DD before sending.');
       return;
     }
     if (selectedDraftIds.size === 0) {
@@ -787,6 +985,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
       setSelectedDraftIds(new Set());
       setSelectedApprover(null); setSelectedRegistrar(null); setSelectedDD(null);
       fetchDrafts();
+      fetchPending(); // refresh exclusion sets
     } catch (err) {
       setSendResult({ success: false, message: err.message || 'Failed to send.' });
     } finally {
@@ -1035,8 +1234,25 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
           )}
 
           {!acmsLoading && acmsAssets.length > 0 && (() => {
+            // Exclude items already in drafts or pending approval
+            const visibleAssets = acmsAssets.filter(asset => !isInDraftOrPending(asset));
+            const hiddenCount   = acmsAssets.length - visibleAssets.length;
+
+            if (visibleAssets.length === 0) {
+              return (
+                <div className="rec-empty" style={{ padding: '1rem' }}>
+                  All systems are already in your drafts or pending approval.
+                  {hiddenCount > 0 && (
+                    <span style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {hiddenCount} system{hiddenCount !== 1 ? 's' : ''} hidden — already submitted or in drafts.
+                    </span>
+                  )}
+                </div>
+              );
+            }
+
             // Group by category, sorted alphabetically
-            const groups = acmsAssets.reduce((acc, asset) => {
+            const groups = visibleAssets.reduce((acc, asset) => {
               const cat = asset.CATEGORY || asset.category || 'Uncategorized';
               if (!acc[cat]) acc[cat] = [];
               acc[cat].push(asset);
@@ -1044,6 +1260,16 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
             }, {});
             return (
               <div style={{ padding: '0 1rem 1rem' }}>
+                {hiddenCount > 0 && (
+                  <div style={{
+                    fontSize: '0.75rem', color: 'var(--text-muted)',
+                    background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+                    borderRadius: '8px', padding: '0.45rem 0.8rem', marginBottom: '0.75rem',
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  }}>
+                    ⚠️ {hiddenCount} system{hiddenCount !== 1 ? 's' : ''} hidden — already in drafts or pending approval.
+                  </div>
+                )}
                 {Object.entries(groups)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([cat, items]) => (
@@ -1590,38 +1816,17 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
               {dropdownsLoading && <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Loading personnel…</div>}
 
               {!dropdownsLoading && [
-                { label: 'Approver', list: approversList, selected: selectedApprover, setter: setSelectedApprover },
-                { label: 'Registrar', list: registrarsList, selected: selectedRegistrar, setter: setSelectedRegistrar },
-                { label: 'Deputy Director (DD)', list: ddsList, selected: selectedDD, setter: setSelectedDD },
+                { label: 'Approver',             list: approversList,  selected: selectedApprover,  setter: setSelectedApprover  },
+                { label: 'Area Focal Point',      list: registrarsList, selected: selectedRegistrar, setter: setSelectedRegistrar },
+                { label: 'Deputy Director (DD)',  list: ddsList,        selected: selectedDD,        setter: setSelectedDD        },
               ].map(({ label, list, selected, setter }) => (
-                <div key={label} style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: 600 }}>{label}</label>
-                  <select
-                    value={selected ? selected.ecno : ''}
-                    onChange={e => {
-                      const person = list.find(p => p.ecno === e.target.value);
-                      setter(person || null);
-                    }}
-                    style={{
-                      width: '100%', padding: '0.55rem 0.8rem',
-                      background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.15)',
-                      borderRadius: 8, color: '#e2e8f0', fontSize: '0.85rem', cursor: 'pointer',
-                    }}
-                  >
-                    <option value="">-- Select {label} --</option>
-                    {list.length === 0 && <option disabled>No personnel available (remote DB may be offline)</option>}
-                    {list.map(p => (
-                      <option key={p.ecno} value={p.ecno}>
-                        {p.name} — {p.designation} ({p.ecno})
-                      </option>
-                    ))}
-                  </select>
-                  {selected && (
-                    <div style={{ marginTop: '0.3rem', fontSize: '0.75rem', color: '#a5b4fc' }}>
-                      ✓ {selected.name} · {selected.designation} · {selected.ecno}
-                    </div>
-                  )}
-                </div>
+                <SearchablePersonSelect
+                  key={label}
+                  label={label}
+                  list={list}
+                  selected={selected}
+                  setter={setter}
+                />
               ))}
 
               <button

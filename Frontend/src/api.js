@@ -10,7 +10,7 @@ import { getStoredToken, getStoredUser } from './authSession';
  */
 
 
-const USE_MOCK = false;                     // ← flip to true for mock data
+const USE_MOCK = true;                     // ← flip to true for mock data
 const BASE_URL = 'http://localhost:5000/api'; // ← Flask backend URL
 
 // ---------------------------------------------------------------------------
@@ -229,6 +229,28 @@ export async function searchAssetRecommendations(q) {
   return apiFetch(`/assets/recommendations/search?q=${encodeURIComponent(q.trim())}`);
 }
 
+/**
+ * Search TBST_ASSETS in cowmis by serial number for the "Where is my Asset" panel.
+ * Returns ASSETNO (assetNumber), EQSRLNO (serialNumber), EQPTDESCP (description), ACUSTODIAN (custodian).
+ */
+export async function searchWhereIsMyAsset(q) {
+  if (!q || !q.trim()) return [];
+  if (USE_MOCK) {
+    await delay(300);
+    return MOCK_ASSETS
+      .filter(a => (a.serialNumber || '').toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 10)
+      .map((a, i) => ({
+        id: `wima-${i + 1}`,
+        assetNumber:  a.asset_number  || a.assetNumber  || '',
+        serialNumber: a.serialNumber  || '',
+        description:  a.configuration || a.model        || '',
+        custodian:    a.AssetCustodianECNO || '',
+      }));
+  }
+  return apiFetch(`/assets/where-is-my-asset?q=${encodeURIComponent(q.trim())}`);
+}
+
 
 export async function getAllAssets() {
   if (USE_MOCK) {
@@ -300,7 +322,7 @@ export async function getApprovers() {
   return apiFetch('/assets/approvers');
 }
 
-/** Fetch the list of available registrars. */
+/** Fetch the list of available Area Focal Points. */
 export async function getRegistrars() {
   if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/registrars');
@@ -337,7 +359,7 @@ export async function getDraftRequests() {
 }
 
 /**
- * Submit selected drafts for approval with chosen Approver, Registrar and DD.
+ * Submit selected drafts for approval with chosen Approver, Area Focal Point and DD.
  * draftIds: number[], approverEcno/Name, registrarEcno/Name, ddEcno/Name, ...designations
  */
 export async function submitPendingRequests(payload) {
