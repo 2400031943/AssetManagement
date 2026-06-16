@@ -11,6 +11,7 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
   const [open, setOpen]     = React.useState(false);
   const [query, setQuery]   = React.useState('');
   const wrapRef             = React.useRef(null);
+  const inputRef            = React.useRef(null);
 
   // Close on outside click
   React.useEffect(() => {
@@ -18,6 +19,16 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Focus the search input whenever the dropdown opens
+  React.useEffect(() => {
+    if (open && inputRef.current) {
+      // Small timeout ensures DOM is painted before focus
+      setTimeout(() => { if (inputRef.current) inputRef.current.focus(); }, 30);
+    } else if (!open) {
+      setQuery('');
+    }
+  }, [open]);
 
   const filtered = query.trim()
     ? list.filter(p =>
@@ -98,17 +109,18 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
           <div style={{ padding: '0.5rem 0.65rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Search size={13} style={{ color: 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
             <input
-              autoFocus
+              ref={inputRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
               onClick={stopPropOnClick ? e => e.stopPropagation() : undefined}
-              placeholder={`Search ${label}…`}
+              onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } }}
+              placeholder={`Search by name, EC No., designation, division…`}
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
                 color: '#e2e8f0', fontSize: '0.8rem',
               }}
             />
-            {query && <span onClick={() => setQuery('')} style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>✕</span>}
+            {query && <span onClick={e => { if(stopPropOnClick) e.stopPropagation(); setQuery(''); }} style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>✕</span>}
           </div>
 
           {/* Options list */}
@@ -126,7 +138,7 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
             {filtered.map(p => (
               <div
                 key={p.ecno}
-                onClick={() => handleSelect(p)}
+                onClick={e => { if (stopPropOnClick) e.stopPropagation(); handleSelect(p); }}
                 style={{
                   padding: '0.55rem 0.85rem', cursor: 'pointer', fontSize: '0.8rem',
                   background: selected?.ecno === p.ecno ? 'rgba(108,99,255,0.18)' : 'transparent',
