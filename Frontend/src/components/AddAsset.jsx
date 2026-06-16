@@ -1602,6 +1602,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
             <label>User Division</label>
             <select name="UserDivision" value={formData.UserDivision} onChange={handleChange} className="login-input">
               <option value="">Select User Division...</option>
+              <option>ITID</option>
               <option>DPFD</option>
               <option>ASAG</option>
               <option>RSAA</option>
@@ -1621,6 +1622,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
             <label>GROUP</label>
             <select name="GROUP" value={formData.GROUP} onChange={handleChange} className="login-input">
               <option value="">Select GROUP...</option>
+              <option>SISG</option>
               <option>SPFPG</option>
               <option>ASAG</option>
               <option>RSAA</option>
