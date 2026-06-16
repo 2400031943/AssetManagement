@@ -1226,9 +1226,10 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                     disabled={currentPage === 1}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.3rem',
-                      background: currentPage === 1 ? 'rgba(255,255,255,0.04)' : 'var(--accent-primary, #6c63ff)',
-                      color: currentPage === 1 ? 'var(--text-muted)' : '#fff',
-                      border: 'none', borderRadius: '8px',
+                      background: currentPage === 1 ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #6c63ff, #a855f7)',
+                      color: currentPage === 1 ? 'rgba(255,255,255,0.35)' : '#fff',
+                      border: '1.5px solid ' + (currentPage === 1 ? 'rgba(255,255,255,0.1)' : 'transparent'),
+                      borderRadius: '8px',
                       padding: '0.45rem 1rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                       fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
                       opacity: currentPage === 1 ? 0.45 : 1,
@@ -1237,10 +1238,12 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                     &#8592; Prev
                   </button>
 
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    Page <strong style={{ color: 'var(--text-primary, #fff)' }}>{currentPage}</strong> of{' '}
-                    <strong style={{ color: 'var(--text-primary, #fff)' }}>{totalPages}</strong>
-                    <span style={{ marginLeft: '0.5rem', opacity: 0.6 }}>({recommendations.length} total)</span>
+                  <span style={{ fontSize: '0.82rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    Page
+                    <strong style={{ color: '#a5b4fc', background: 'rgba(108,99,255,0.18)', borderRadius: 5, padding: '1px 8px', fontFamily: 'monospace' }}>{currentPage}</strong>
+                    of
+                    <strong style={{ color: '#a5b4fc' }}>{totalPages}</strong>
+                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>· {recommendations.length} records</span>
                   </span>
 
                   <button
@@ -1249,12 +1252,13 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                     disabled={currentPage === totalPages}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.3rem',
-                      background: currentPage === totalPages ? 'rgba(255,255,255,0.04)' : 'var(--accent-primary, #6c63ff)',
-                      color: currentPage === totalPages ? 'var(--text-muted)' : '#fff',
-                      border: 'none', borderRadius: '8px',
+                      background: currentPage === totalPages ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #6c63ff, #a855f7)',
+                      color: currentPage === totalPages ? 'rgba(255,255,255,0.35)' : '#fff',
+                      border: '1.5px solid ' + (currentPage === totalPages ? 'rgba(255,255,255,0.1)' : 'transparent'),
+                      borderRadius: '8px',
                       padding: '0.45rem 1rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
                       fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s',
-                      opacity: currentPage === totalPages ? 0.45 : 1,
+                      opacity: currentPage === totalPages ? 0.5 : 1,
                     }}
                   >
                     Next &#8594;
