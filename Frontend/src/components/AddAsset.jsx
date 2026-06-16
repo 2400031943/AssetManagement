@@ -30,15 +30,9 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
     }
   }, [open]);
 
+  // Search by name only
   const filtered = query.trim()
-    ? list.filter(p =>
-        (p.name         || '').toLowerCase().includes(query.toLowerCase()) ||
-        (p.ecno         || '').toLowerCase().includes(query.toLowerCase()) ||
-        (p.designation  || '').toLowerCase().includes(query.toLowerCase()) ||
-        (p.groupName    || '').toLowerCase().includes(query.toLowerCase()) ||
-        (p.divisionName || '').toLowerCase().includes(query.toLowerCase()) ||
-        (p.sectionName  || '').toLowerCase().includes(query.toLowerCase())
-      )
+    ? list.filter(p => (p.name || '').toLowerCase().includes(query.toLowerCase()))
     : list;
 
   const handleSelect = (person) => {
@@ -114,7 +108,7 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
               onChange={e => setQuery(e.target.value)}
               onClick={stopPropOnClick ? e => e.stopPropagation() : undefined}
               onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } }}
-              placeholder={`Search by name, EC No., designation, division…`}
+              placeholder="Search by name…"
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
                 color: '#e2e8f0', fontSize: '0.8rem',
@@ -179,22 +173,48 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
         </div>
       )}
 
-      {/* Selection confirmation */}
+      {/* Selected person detail card */}
       {selected && (
-        <div style={{ marginTop: '0.22rem', fontSize: '0.7rem', color: '#a5b4fc', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <CheckCircle2 size={11} />
-            <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{selected.ecno}</span>
-            <span>{selected.name}</span>
-            {selected.designation && <span style={{ color: 'rgba(255,255,255,0.45)' }}>· {selected.designation}</span>}
+        <div style={{
+          marginTop: '0.5rem',
+          background: 'rgba(108,99,255,0.08)',
+          border: '1.5px solid rgba(108,99,255,0.28)',
+          borderRadius: 8,
+          padding: '0.65rem 0.85rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.3rem',
+        }}>
+          {/* Header row: check icon + name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <CheckCircle2 size={13} style={{ color: '#a5b4fc', flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.88rem' }}>{selected.name}</span>
           </div>
-          {(selected.groupName || selected.divisionName || selected.sectionName) && (
-            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.38)', paddingLeft: 15, display: 'flex', flexWrap: 'wrap', gap: '0 8px' }}>
-              {selected.groupName    && <span>Grp: {selected.groupName}</span>}
-              {selected.divisionName && <span>Div: {selected.divisionName}</span>}
-              {selected.sectionName  && <span>Sec: {selected.sectionName}</span>}
-            </div>
-          )}
+          {/* Detail rows */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: '0.18rem', columnGap: '0.7rem', paddingLeft: 19 }}>
+            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>EC No.</span>
+            <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: 700, color: '#a5b4fc' }}>{selected.ecno}</span>
+
+            {selected.designation && <>
+              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>Designation</span>
+              <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>{selected.designation}</span>
+            </>}
+
+            {selected.groupName && <>
+              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>Group</span>
+              <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>{selected.groupName}</span>
+            </>}
+
+            {selected.divisionName && <>
+              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>Division</span>
+              <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>{selected.divisionName}</span>
+            </>}
+
+            {selected.sectionName && <>
+              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>Section</span>
+              <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>{selected.sectionName}</span>
+            </>}
+          </div>
         </div>
       )}
     </div>
