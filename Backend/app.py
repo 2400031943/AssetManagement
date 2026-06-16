@@ -449,12 +449,12 @@ def create_app(config_class=Config):
 
     def _fetch_personnel_from_remote(func_codes):
         """
-        Query TBAD_EMPFUNCDESG_VIEW joined with VIEWEMPINFO from the remote cowmis DB.
-        Returns list of {ecno, name, designation, code} for the given FUNCDESGCODE(s).
+        Query TBAD_FUNCDESG_VIEW INNER JOIN VIEWEMPINFO from the remote cowmis DB.
+        Only employees whose EMPLOYEECODE exists in TBAD_FUNCDESG_VIEW are returned.
 
-        Columns used:
-          TBAD_EMPFUNCDESG_VIEW : EMPLOYEECODE, FUNCDESGDES, FUNCDESGCODE
-          VIEWEMPINFO           : EMPLOYEENAME
+        Columns fetched:
+          TBAD_FUNCDESG_VIEW : EMPLOYEECODE, FUNCDESGDES, FUNCDESGCODE
+          VIEWEMPINFO        : EMPLOYEENAME, GROUPFULLNAME, DIVNFULLNAME, SECTIONFULLNAME
 
         Returns [] gracefully if the remote DB is unreachable or the query fails.
         """
@@ -473,17 +473,20 @@ def create_app(config_class=Config):
 
         query = text(f"""
             SELECT DISTINCT
-                LTRIM(RTRIM(CAST(e.EMPLOYEECODE  AS NVARCHAR(50))))  AS ecno,
-                LTRIM(RTRIM(CAST(v.EMPLOYEENAME  AS NVARCHAR(200)))) AS name,
-                LTRIM(RTRIM(CAST(e.FUNCDESGDES   AS NVARCHAR(200)))) AS designation,
-                e.FUNCDESGCODE                                        AS code
-            FROM TBAD_EMPFUNCDESG_VIEW e
-            LEFT JOIN VIEWEMPINFO v
+                LTRIM(RTRIM(CAST(f.EMPLOYEECODE    AS NVARCHAR(50))))   AS ecno,
+                LTRIM(RTRIM(CAST(v.EMPLOYEENAME    AS NVARCHAR(200))))  AS name,
+                LTRIM(RTRIM(CAST(f.FUNCDESGDES     AS NVARCHAR(200))))  AS designation,
+                f.FUNCDESGCODE                                           AS code,
+                LTRIM(RTRIM(CAST(v.GROUPFULLNAME   AS NVARCHAR(200))))  AS group_name,
+                LTRIM(RTRIM(CAST(v.DIVNFULLNAME    AS NVARCHAR(200))))  AS division_name,
+                LTRIM(RTRIM(CAST(v.SECTIONFULLNAME AS NVARCHAR(200))))  AS section_name
+            FROM TBAD_FUNCDESG_VIEW f
+            INNER JOIN VIEWEMPINFO v
                 ON LTRIM(RTRIM(CAST(v.EMPLOYEECODE AS NVARCHAR(50))))
-                 = LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50))))
-            WHERE e.FUNCDESGCODE IN ({placeholders})
-              AND LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50)))) <> ''
-            ORDER BY v.EMPLOYEENAME, e.EMPLOYEECODE
+                 = LTRIM(RTRIM(CAST(f.EMPLOYEECODE AS NVARCHAR(50))))
+            WHERE f.FUNCDESGCODE IN ({placeholders})
+              AND LTRIM(RTRIM(CAST(f.EMPLOYEECODE AS NVARCHAR(50)))) <> ''
+            ORDER BY v.EMPLOYEENAME, f.EMPLOYEECODE
         """)
 
         try:
@@ -495,22 +498,23 @@ def create_app(config_class=Config):
                 ecno = (row.get('ecno') or '').strip()
                 if not ecno:
                     continue
-                name        = (row.get('name')        or '').strip() or ecno
-                designation = (row.get('designation') or '').strip()
-                code        = row.get('code')
                 result.append({
-                    'ecno':        ecno,
-                    'name':        name,
-                    'designation': designation,
-                    'code':        code,
+                    'ecno':         ecno,
+                    'name':         (row.get('name')          or '').strip() or ecno,
+                    'designation':  (row.get('designation')   or '').strip(),
+                    'code':         row.get('code'),
+                    'groupName':    (row.get('group_name')    or '').strip(),
+                    'divisionName': (row.get('division_name') or '').strip(),
+                    'sectionName':  (row.get('section_name')  or '').strip(),
                 })
 
-            print(f'[INFO] _fetch_personnel_from_remote: codes={func_codes} → {len(result)} records')
+            print(f'[INFO] _fetch_personnel_from_remote (TBAD_FUNCDESG_VIEW): codes={func_codes} → {len(result)} records')
             return result
 
         except Exception as e:
             print(f'[WARN] Could not fetch personnel from remote cowmis: {e}')
             return []
+
 
 
     @app.route('/api/assets/approvers', methods=['GET'])

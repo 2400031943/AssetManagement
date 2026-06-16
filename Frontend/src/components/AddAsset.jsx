@@ -21,9 +21,12 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
 
   const filtered = query.trim()
     ? list.filter(p =>
-        (p.name        || '').toLowerCase().includes(query.toLowerCase()) ||
-        (p.ecno        || '').toLowerCase().includes(query.toLowerCase()) ||
-        (p.designation || '').toLowerCase().includes(query.toLowerCase())
+        (p.name         || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.ecno         || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.designation  || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.groupName    || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.divisionName || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.sectionName  || '').toLowerCase().includes(query.toLowerCase())
       )
     : list;
 
@@ -129,17 +132,27 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
                   background: selected?.ecno === p.ecno ? 'rgba(108,99,255,0.18)' : 'transparent',
                   borderLeft: selected?.ecno === p.ecno ? '3px solid var(--accent-primary, #6c63ff)' : '3px solid transparent',
                   transition: 'background 0.15s',
-                  display: 'flex', flexDirection: 'column', gap: 1,
+                  display: 'flex', flexDirection: 'column', gap: 2,
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
                 onMouseLeave={e => e.currentTarget.style.background = selected?.ecno === p.ecno ? 'rgba(108,99,255,0.18)' : 'transparent'}
               >
+                {/* Row 1: EC No. + Name */}
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#a5b4fc', fontSize: '0.78rem' }}>{p.ecno}</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#a5b4fc', fontSize: '0.78rem', flexShrink: 0 }}>{p.ecno}</span>
                   <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{p.name}</span>
                 </span>
+                {/* Row 2: Designation */}
                 {p.designation && (
-                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.42)', paddingLeft: 2 }}>{p.designation}</span>
+                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.48)', paddingLeft: 2 }}>{p.designation}</span>
+                )}
+                {/* Row 3: Group · Division · Section */}
+                {(p.groupName || p.divisionName || p.sectionName) && (
+                  <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.32)', paddingLeft: 2, display: 'flex', flexWrap: 'wrap', gap: '0 6px' }}>
+                    {p.groupName    && <span>Grp: {p.groupName}</span>}
+                    {p.divisionName && <span>Div: {p.divisionName}</span>}
+                    {p.sectionName  && <span>Sec: {p.sectionName}</span>}
+                  </span>
                 )}
               </div>
             ))}
@@ -156,10 +169,20 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
 
       {/* Selection confirmation */}
       {selected && (
-        <div style={{ marginTop: '0.22rem', fontSize: '0.7rem', color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <CheckCircle2 size={11} />
-          <span>{selected.name} · <span style={{ fontFamily: 'monospace' }}>{selected.ecno}</span></span>
-          {selected.designation && <span style={{ color: 'rgba(255,255,255,0.38)' }}>· {selected.designation}</span>}
+        <div style={{ marginTop: '0.22rem', fontSize: '0.7rem', color: '#a5b4fc', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <CheckCircle2 size={11} />
+            <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{selected.ecno}</span>
+            <span>{selected.name}</span>
+            {selected.designation && <span style={{ color: 'rgba(255,255,255,0.45)' }}>· {selected.designation}</span>}
+          </div>
+          {(selected.groupName || selected.divisionName || selected.sectionName) && (
+            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.38)', paddingLeft: 15, display: 'flex', flexWrap: 'wrap', gap: '0 8px' }}>
+              {selected.groupName    && <span>Grp: {selected.groupName}</span>}
+              {selected.divisionName && <span>Div: {selected.divisionName}</span>}
+              {selected.sectionName  && <span>Sec: {selected.sectionName}</span>}
+            </div>
+          )}
         </div>
       )}
     </div>
