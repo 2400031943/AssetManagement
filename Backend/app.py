@@ -472,7 +472,7 @@ def create_app(config_class=Config):
                 ON LTRIM(RTRIM(CAST(v.EMPLOYEECODE AS NVARCHAR(50))))
                  = LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50))))
             WHERE LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50)))) <> ''
-            ORDER BY v.EMPLOYEENAME, e.EMPLOYEECODE
+            ORDER BY name, ecno
         """)
 
         try:
