@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LogOut, Database, LayoutDashboard, PlusCircle, Sparkles, Clock, ShieldCheck, MapPin } from 'lucide-react';
+import { LogOut, Database, LayoutDashboard, PlusCircle, Sparkles, Clock, ShieldCheck, MapPin, Trash2 } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getMyAssets, createAsset, updateAsset, getCurrentUserProfile } from '../api';
 import { getStoredSession, clearStoredSession, setStoredSession } from '../authSession';
@@ -8,6 +8,7 @@ import AddAsset from '../components/AddAsset';
 import ApprovalPending from '../components/ApprovalPending';
 import PendingApprovals from '../components/PendingApprovals';
 import WhereIsMyAsset from '../components/WhereIsMyAsset';
+import DeleteAsset from '../components/DeleteAsset';
 import './Dashboard.css';
 
 export default function User() {
@@ -120,12 +121,12 @@ export default function User() {
 
         <nav className="sidebar-nav">
           <button className={`nav-item ${activeTab === 'approval-pending' ? 'active' : ''}`} onClick={() => handleTabChange('approval-pending')}>
-            <Clock size={20} /><span>Approval Pending List</span>
+            <Clock size={20} /><span>Sent To Approval List</span>
           </button>
           
           {showPendingApprovalsTab && (
             <button className={`nav-item ${activeTab === 'pending-approvals' ? 'active' : ''}`} onClick={() => handleTabChange('pending-approvals')}>
-              <ShieldCheck size={20} /><span>Pending Approvals</span>
+              <ShieldCheck size={20} /><span>Pending For My Approval</span>
             </button>
           )}
 
@@ -136,7 +137,10 @@ export default function User() {
             <PlusCircle size={20} /><span>Add System to ACMS List</span>
           </button>
           <button className={`nav-item ${activeTab === 'coins-recommendations' ? 'active' : ''}`} onClick={() => handleTabChange('coins-recommendations')}>
-            <Sparkles size={20} /><span>COINS Recommendations</span>
+            <Sparkles size={20} /><span>Add From Coins</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'delete-asset' ? 'active' : ''}`} onClick={() => handleTabChange('delete-asset')}>
+            <Trash2 size={20} /><span>Delete Asset from ACMS List</span>
           </button>
           <button className={`nav-item ${activeTab === 'where-is-my-asset' ? 'active' : ''}`} onClick={() => handleTabChange('where-is-my-asset')}>
             <MapPin size={20} /><span>Where is my Asset?</span>
@@ -181,6 +185,7 @@ export default function User() {
           />
         )}
         {activeTab === 'where-is-my-asset' && <WhereIsMyAsset />}
+        {activeTab === 'delete-asset'       && <DeleteAsset />}
       </main>
     </div>
   );

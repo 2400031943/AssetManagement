@@ -102,6 +102,18 @@ function RequestCard({ req, onWithdraw }) {
       {/* ── Top row ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
+          {/* DELETE REQUEST badge */}
+          {req.requestType === 'delete' && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              background: 'rgba(239,68,68,0.15)', color: '#fca5a5',
+              border: '1px solid rgba(239,68,68,0.35)',
+              borderRadius: 6, padding: '2px 8px', fontSize: '0.65rem', fontWeight: 800,
+              marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.06em',
+            }}>
+              🗑️ Delete Request
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
             <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem' }}>
               {req.assetNumber || req.serialNumber || `Request #${req.id}`}
@@ -267,7 +279,7 @@ export default function ApprovalPending() {
       <div className="section-header" style={{ marginBottom: '1.5rem' }}>
         <div>
           <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>
-            Approval Pending List
+            Sent To Approval List
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
             Systems you have requested to add to the ACMS list, awaiting multi-level approval.
@@ -315,7 +327,7 @@ export default function ApprovalPending() {
           <Clock size={40} style={{ color: 'var(--text-muted)', marginBottom: '1rem' }} />
           <h3 style={{ color: '#e2e8f0', marginBottom: '0.5rem' }}>No Pending Requests</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            You have no systems awaiting approval. Go to <strong>COINS Recommendations</strong> and click
+            You have no systems awaiting approval. Go to <strong>Add From Coins</strong> and click
             "+ Request Add" on a system to submit a request.
           </p>
         </div>

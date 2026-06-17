@@ -142,17 +142,29 @@ class AcmsList2027(db.Model):
 
 class PendingRequest(db.Model):
     """
-    Approval workflow for adding a system to the ACMS list.
-    Flow: Submitted → Approver → Area Focal Point → DD → Admin → Approved
+    Approval workflow for adding / deleting a system from the ACMS list.
+
+    request_type = 'add'    → add flow:    Submitted → Approver → AFP → DD → Admin → Approved
+    request_type = 'delete' → delete flow: Submitted → Approver → AFP → DD → Approved
+                                           (on DD approval the AcmsList2027 row is deleted)
+
     Can be Withdrawn by the requester or Rejected at any level.
     """
     __tablename__ = 'pending_requests'
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # ── Request type ─────────────────────────────────────────────────────────
+    # 'add' (default) | 'delete'
+    request_type         = db.Column(db.String(10),  nullable=False, default='add')
+    # FK to dbo.ACMS_list_2027.id — only populated for request_type='delete'
+    acms_list_2027_id    = db.Column(db.Integer,     nullable=True)
+
     # ── Requester info ──────────────────────────────────────────────────────
     requester_ecno       = db.Column(db.String(50),  nullable=False)
     requester_name       = db.Column(db.String(100), nullable=True)
+    # Requester's reason/remarks — required for delete requests, optional for add
+    requester_remarks    = db.Column(db.Text,        nullable=True)
 
     # ── Asset identification ─────────────────────────────────────────────────
     asset_number         = db.Column(db.String(100), nullable=True)
@@ -213,8 +225,11 @@ class PendingRequest(db.Model):
     def to_dict(self):
         return {
             'id':                self.id,
+            'requestType':       self.request_type or 'add',
+            'acmsListId':        self.acms_list_2027_id,
             'requesterEcno':     self.requester_ecno,
             'requesterName':     self.requester_name,
+            'requesterRemarks':  self.requester_remarks,
             'assetNumber':       self.asset_number,
             'serialNumber':      self.serial_number,
             'category':          self.category,

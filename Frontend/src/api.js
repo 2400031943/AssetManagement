@@ -316,27 +316,23 @@ export async function deleteAsset(assetId) {
 // APPROVAL PENDING WORKFLOW
 // ---------------------------------------------------------------------------
 
-/** Fetch the list of available approvers. */
+/** Fetch the list of available approvers. Always fetches from real remote DB. */
 export async function getApprovers() {
-  if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/approvers');
 }
 
-/** Fetch the list of available Area Focal Points. */
+/** Fetch the list of available Area Focal Points. Always fetches from real remote DB. */
 export async function getRegistrars() {
-  if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/registrars');
 }
 
-/** Fetch the list of available Deputy Directors. */
+/** Fetch the list of available Deputy Directors. Always fetches from real remote DB. */
 export async function getDDs() {
-  if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/dds');
 }
 
-/** Fetch the list of available Admins. */
+/** Fetch the list of available Admins. Always fetches from real remote DB. */
 export async function getAdmins() {
-  if (USE_MOCK) { await delay(300); return []; }
   return apiFetch('/assets/admins');
 }
 
@@ -405,5 +401,27 @@ export async function approveOrRejectRequest(requestId, action, remarks = '') {
   return apiFetch(`/assets/pending-requests/${requestId}/approve`, {
     method: 'POST',
     body: JSON.stringify({ action, remarks }),
+  });
+}
+
+/**
+ * Submit a deletion request for an asset in dbo.ACMS_list_2027.
+ * data: { acmsListId, approverEcno, approverName, registrarEcno, registrarName, ddEcno, ddName }
+ */
+export async function requestAssetDelete(data) {
+  return apiFetch('/assets/request-delete', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Edit asset details on a pending request (approver / AFP / DD / Admin only).
+ * data: partial asset fields — only included keys are updated.
+ */
+export async function editPendingRequest(requestId, data) {
+  return apiFetch(`/assets/pending-requests/${requestId}/edit`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
   });
 }

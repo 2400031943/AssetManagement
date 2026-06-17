@@ -447,14 +447,11 @@ def create_app(config_class=Config):
     # DD has its own code
     DD_FUNC_CODE = 40
 
-    def _fetch_personnel_from_remote(func_codes):
+    def _fetch_personnel_from_remote(func_codes=None):
         """
-        Query TBAD_FUNCDESG_VIEW INNER JOIN VIEWEMPINFO from the remote cowmis DB.
-        Only employees whose EMPLOYEECODE exists in TBAD_FUNCDESG_VIEW are returned.
-
-        Columns fetched:
-          TBAD_FUNCDESG_VIEW : EMPLOYEECODE, FUNCDESGDES, FUNCDESGCODE
-          VIEWEMPINFO        : EMPLOYEENAME, GROUPFULLNAME, DIVNFULLNAME, SECTIONFULLNAME
+        Query TBAD_EMPFUNCDESG_VIEW (for EMPLOYEECODE) INNER JOIN VIEWEMPINFO
+        (for EMPLOYEENAME, GROUPFULLNAME, DIVNFULLNAME, SECTIONFULLNAME)
+        from the remote cowmis DB.
 
         Returns [] gracefully if the remote DB is unreachable or the query fails.
         """
@@ -463,52 +460,41 @@ def create_app(config_class=Config):
             print('[WARN] remote_pis engine not configured — cannot fetch personnel')
             return []
 
-        # Accept a single int or a tuple/list of ints
-        if isinstance(func_codes, int):
-            func_codes = (func_codes,)
-
-        # Build safe numbered placeholders  :c0, :c1, …
-        placeholders = ', '.join(f':c{i}' for i in range(len(func_codes)))
-        params = {f'c{i}': v for i, v in enumerate(func_codes)}
-
-        query = text(f"""
+        query = text("""
             SELECT DISTINCT
-                LTRIM(RTRIM(CAST(f.EMPLOYEECODE    AS NVARCHAR(50))))   AS ecno,
+                LTRIM(RTRIM(CAST(e.EMPLOYEECODE    AS NVARCHAR(50))))   AS ecno,
                 LTRIM(RTRIM(CAST(v.EMPLOYEENAME    AS NVARCHAR(200))))  AS name,
-                LTRIM(RTRIM(CAST(f.FUNCDESGDES     AS NVARCHAR(200))))  AS designation,
-                f.FUNCDESGCODE                                           AS code,
                 LTRIM(RTRIM(CAST(v.GROUPFULLNAME   AS NVARCHAR(200))))  AS group_name,
                 LTRIM(RTRIM(CAST(v.DIVNFULLNAME    AS NVARCHAR(200))))  AS division_name,
                 LTRIM(RTRIM(CAST(v.SECTIONFULLNAME AS NVARCHAR(200))))  AS section_name
-            FROM TBAD_FUNCDESG_VIEW f
+            FROM TBAD_EMPFUNCDESG_VIEW e
             INNER JOIN VIEWEMPINFO v
                 ON LTRIM(RTRIM(CAST(v.EMPLOYEECODE AS NVARCHAR(50))))
-                 = LTRIM(RTRIM(CAST(f.EMPLOYEECODE AS NVARCHAR(50))))
-            WHERE f.FUNCDESGCODE IN ({placeholders})
-              AND LTRIM(RTRIM(CAST(f.EMPLOYEECODE AS NVARCHAR(50)))) <> ''
-            ORDER BY v.EMPLOYEENAME, f.EMPLOYEECODE
+                 = LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50))))
+            WHERE LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50)))) <> ''
+            ORDER BY v.EMPLOYEENAME, e.EMPLOYEECODE
         """)
 
         try:
             with remote_engine.connect() as conn:
-                rows = conn.execute(query, params).mappings().all()
+                rows = conn.execute(query).mappings().all()
 
             result = []
             for row in rows:
                 ecno = (row.get('ecno') or '').strip()
                 if not ecno:
                     continue
+                name = (row.get('name') or '').strip() or ecno
                 result.append({
                     'ecno':         ecno,
-                    'name':         (row.get('name')          or '').strip() or ecno,
-                    'designation':  (row.get('designation')   or '').strip(),
-                    'code':         row.get('code'),
+                    'name':         name,
+                    'designation':  '',
                     'groupName':    (row.get('group_name')    or '').strip(),
                     'divisionName': (row.get('division_name') or '').strip(),
                     'sectionName':  (row.get('section_name')  or '').strip(),
                 })
 
-            print(f'[INFO] _fetch_personnel_from_remote (TBAD_FUNCDESG_VIEW): codes={func_codes} → {len(result)} records')
+            print(f'[INFO] _fetch_personnel_from_remote (TBAD_EMPFUNCDESG_VIEW + VIEWEMPINFO): {len(result)} records')
             return result
 
         except Exception as e:
@@ -521,36 +507,123 @@ def create_app(config_class=Config):
     @jwt_required()
     def get_approvers():
         """
-        Return personnel list for Approver dropdown.
-        Source: TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO, FUNCDESGCODE IN APPROVAL_FUNC_CODES.
+        Return all employees from TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO
+        for the Approver dropdown.
         """
-        return jsonify(_fetch_personnel_from_remote(APPROVAL_FUNC_CODES)), 200
+        return jsonify(_fetch_personnel_from_remote()), 200
 
     @app.route('/api/assets/registrars', methods=['GET'])
     @jwt_required()
     def get_registrars():
         """
-        Return personnel list for Area Focal Point dropdown.
-        Source: same as approvers — FUNCDESGCODE IN APPROVAL_FUNC_CODES.
+        Return all employees from TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO
+        for the Area Focal Point dropdown.
         """
-        return jsonify(_fetch_personnel_from_remote(APPROVAL_FUNC_CODES)), 200
+        return jsonify(_fetch_personnel_from_remote()), 200
 
     @app.route('/api/assets/dds', methods=['GET'])
     @jwt_required()
     def get_dds():
         """
-        Return personnel list for Deputy Director dropdown.
-        Source: TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO, FUNCDESGCODE = 40.
+        Return all employees from TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO
+        for the Deputy Director dropdown.
         """
-        return jsonify(_fetch_personnel_from_remote(DD_FUNC_CODE)), 200
+        return jsonify(_fetch_personnel_from_remote()), 200
 
     @app.route('/api/assets/admins', methods=['GET'])
     @jwt_required()
     def get_admins():
         """
-        Return personnel list for Admin dropdown (same codes as approvers).
+        Return all employees from TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO
+        for the Admin dropdown.
         """
-        return jsonify(_fetch_personnel_from_remote(APPROVAL_FUNC_CODES)), 200
+        return jsonify(_fetch_personnel_from_remote()), 200
+
+    @app.route('/api/assets/request-delete', methods=['POST'])
+    @jwt_required()
+    def request_asset_delete():
+        """
+        Submit a deletion request for an asset in dbo.ACMS_list_2027.
+
+        Body: {
+          acmsListId:      int,   (id of the row in ACMS_list_2027 to delete)
+          approverEcno:    str,
+          approverName:    str,
+          registrarEcno:  str,
+          registrarName:  str,
+          ddEcno:          str,
+          ddName:          str
+        }
+
+        Flow: Submitted -> Approver Approved -> Registrar Approved -> Approved
+              On DD (Registrar Approved -> Approved) the ACMS_list_2027 row is deleted.
+        """
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        data            = request.get_json() or {}
+
+        acms_list_id        = data.get('acmsListId')
+        approver_ecno       = (data.get('approverEcno')      or '').strip()
+        registrar_ecno      = (data.get('registrarEcno')     or '').strip()
+        dd_ecno             = (data.get('ddEcno')            or '').strip()
+        requester_remarks   = (data.get('requesterRemarks')  or '').strip()
+
+        if not acms_list_id:
+            return jsonify({'error': 'acmsListId is required.'}), 400
+        if not approver_ecno or not registrar_ecno or not dd_ecno:
+            return jsonify({'error': 'Approver, Area Focal Point and DD must all be selected.'}), 400
+        if not requester_remarks:
+            return jsonify({'error': 'Please provide a reason/remarks for the deletion request.'}), 400
+
+        # Fetch the target ACMS row and verify ownership
+        acms_row = AcmsList2027.query.get(acms_list_id)
+        if not acms_row:
+            return jsonify({'error': 'Asset not found in ACMS_list_2027.'}), 404
+
+        requester_ecno = (current_user.emp_code or '').strip().upper()
+        row_ecno       = (acms_row.asset_custodian_ecno or '').strip().upper()
+        if row_ecno and row_ecno != requester_ecno:
+            return jsonify({'error': 'You can only request deletion of your own assets.'}), 403
+
+        pr = PendingRequest(
+            request_type         = 'delete',
+            acms_list_2027_id    = acms_list_id,
+            requester_ecno       = requester_ecno,
+            requester_name       = current_user.username,
+            requester_remarks    = requester_remarks,
+            # Copy asset details for display in approval cards
+            asset_number         = acms_row.asset_number,
+            serial_number        = acms_row.serial_number,
+            category             = acms_row.category,
+            make                 = acms_row.make,
+            model                = acms_row.model,
+            configuration        = acms_row.configuration,
+            network_domain       = acms_row.network_domain,
+            ip_address           = acms_row.ip_address,
+            monitor              = acms_row.monitor,
+            asset_custodian_ecno = acms_row.asset_custodian_ecno,
+            user_division        = acms_row.user_division,
+            group_name           = acms_row.group_name,
+            area                 = acms_row.area,
+            location             = acms_row.location,
+            acms_fms             = acms_row.acms_fms,
+            warranty             = acms_row.warranty,
+            fms_expiry_date      = acms_row.fms_expiry_date,
+            # Approval chain
+            status               = 'Submitted',
+            current_level        = 1,
+            approver_ecno        = approver_ecno,
+            approver_name        = data.get('approverName'),
+            registrar_ecno       = registrar_ecno,
+            registrar_name       = data.get('registrarName'),
+            dd_ecno              = dd_ecno,
+            dd_name              = data.get('ddName'),
+        )
+
+        db.session.add(pr)
+        db.session.commit()
+        print(f'[INFO] Delete request created: id={pr.id} asset={acms_row.serial_number} by {requester_ecno}')
+        return jsonify({'message': 'Deletion request submitted for approval.', 'id': pr.id}), 201
 
     @app.route('/api/assets/request-add', methods=['POST'])
     @jwt_required()
@@ -767,9 +840,10 @@ def create_app(config_class=Config):
         elif pr.status == 'Registrar Approved' and (pr.dd_ecno or '').strip().upper() == ecno:
             allowed = True
             if action == 'approve':
-                pr.dd_remarks   = remarks
-                pr.dd_action_at = now
-                pr.status       = 'DD Approved'
+                pr.dd_remarks    = remarks
+                pr.dd_action_at  = now
+                # Both add and delete flows: DD approval moves to 'DD Approved' -> Admin is next
+                pr.status        = 'DD Approved'
                 pr.current_level = 4
             else:
                 pr.dd_remarks   = remarks
@@ -783,33 +857,46 @@ def create_app(config_class=Config):
                 pr.admin_action_at = now
                 pr.status          = 'Approved'
                 pr.current_level   = 5
-                # — Write to dbo.ACMS_list_2027 —
-                try:
-                    acms = AcmsList2027(
-                        asset_number         = pr.asset_number,
-                        serial_number        = pr.serial_number,
-                        category             = pr.category,
-                        make                 = pr.make,
-                        model                = pr.model,
-                        configuration        = pr.configuration,
-                        network_domain       = pr.network_domain,
-                        ip_address           = pr.ip_address,
-                        monitor              = pr.monitor,
-                        asset_custodian_ecno = pr.asset_custodian_ecno,
-                        user_division        = pr.user_division,
-                        group_name           = pr.group_name,
-                        area                 = pr.area,
-                        location             = pr.location,
-                        acms_fms             = pr.acms_fms,
-                        warranty             = pr.warranty or 'No',
-                        fms_expiry_date      = pr.fms_expiry_date,
-                        assigned_to          = None,
-                        status               = 'Available',
-                    )
-                    db.session.add(acms)
-                    print(f'[INFO] Written to ACMS_list_2027: serial={pr.serial_number}')
-                except Exception as e:
-                    print(f'[ERROR] Failed to write to ACMS_list_2027: {e}')
+                # ── Add flow: write the asset into dbo.ACMS_list_2027 ─────────────
+                if (pr.request_type or 'add') == 'add':
+                    try:
+                        acms = AcmsList2027(
+                            asset_number         = pr.asset_number,
+                            serial_number        = pr.serial_number,
+                            category             = pr.category,
+                            make                 = pr.make,
+                            model                = pr.model,
+                            configuration        = pr.configuration,
+                            network_domain       = pr.network_domain,
+                            ip_address           = pr.ip_address,
+                            monitor              = pr.monitor,
+                            asset_custodian_ecno = pr.asset_custodian_ecno,
+                            user_division        = pr.user_division,
+                            group_name           = pr.group_name,
+                            area                 = pr.area,
+                            location             = pr.location,
+                            acms_fms             = pr.acms_fms,
+                            warranty             = pr.warranty or 'No',
+                            fms_expiry_date      = pr.fms_expiry_date,
+                            assigned_to          = None,
+                            status               = 'Available',
+                        )
+                        db.session.add(acms)
+                        print(f'[INFO] Written to ACMS_list_2027: serial={pr.serial_number}')
+                    except Exception as e:
+                        print(f'[ERROR] Failed to write to ACMS_list_2027: {e}')
+                # ── Delete flow: physically remove the row from dbo.ACMS_list_2027 ───
+                else:
+                    if pr.acms_list_2027_id:
+                        try:
+                            acms_row = AcmsList2027.query.get(pr.acms_list_2027_id)
+                            if acms_row:
+                                db.session.delete(acms_row)
+                                print(f'[INFO] Deleted ACMS_list_2027 row id={pr.acms_list_2027_id} serial={acms_row.serial_number}')
+                            else:
+                                print(f'[WARN] ACMS_list_2027 row id={pr.acms_list_2027_id} not found at Admin approval time')
+                        except Exception as e:
+                            print(f'[ERROR] Failed to delete ACMS_list_2027 row: {e}')
             else:
                 pr.admin_remarks   = remarks
                 pr.admin_action_at = now
@@ -821,6 +908,88 @@ def create_app(config_class=Config):
         pr.updated_at = now
         db.session.commit()
         return jsonify({'message': f'Request {action}d successfully.', 'status': pr.status}), 200
+
+    @app.route('/api/assets/pending-requests/<int:request_id>/edit', methods=['PATCH'])
+    @jwt_required()
+    def edit_pending_request(request_id):
+        """
+        Allow the current active approver to edit asset details on a pending
+        request before approving or rejecting.
+
+        Permission rules (mirrors approve logic):
+          status = Submitted          → Approver (approver_ecno)
+          status = Approver Approved  → AFP     (registrar_ecno)
+          status = Registrar Approved → DD      (dd_ecno)
+          status = DD Approved        → Admin   (role = 'Admin')
+
+        Edit is blocked for delete requests (request_type = 'delete').
+
+        Body: any subset of editable asset fields.
+        Returns: 200 { message, request: { ...updated fields } }
+        """
+        current_user_id = int(get_jwt_identity())
+        current_user    = User.query.get_or_404(current_user_id)
+        ecno            = (current_user.emp_code or '').strip().upper()
+        is_admin        = (current_user.role or '').strip().lower() == 'admin'
+
+        pr = PendingRequest.query.get_or_404(request_id)
+
+        # Block edits on delete requests
+        if (pr.request_type or 'add') == 'delete':
+            return jsonify({'error': 'Asset details cannot be edited on a deletion request.'}), 400
+
+        # Verify the caller is the current active approver
+        allowed = False
+        if   pr.status == 'Submitted'          and (pr.approver_ecno  or '').strip().upper() == ecno: allowed = True
+        elif pr.status == 'Approver Approved'  and (pr.registrar_ecno or '').strip().upper() == ecno: allowed = True
+        elif pr.status == 'Registrar Approved' and (pr.dd_ecno        or '').strip().upper() == ecno: allowed = True
+        elif pr.status == 'DD Approved'        and is_admin:                                           allowed = True
+
+        if not allowed:
+            return jsonify({'error': 'You are not authorised to edit this request at its current level.'}), 403
+
+        data = request.get_json() or {}
+
+        # Apply editable fields — skip keys that are not present in the payload
+        EDITABLE = {
+            'assetNumber':       'asset_number',
+            'serialNumber':      'serial_number',
+            'category':          'category',
+            'make':              'make',
+            'model':             'model',
+            'configuration':     'configuration',
+            'networkDomain':     'network_domain',
+            'ipAddress':         'ip_address',
+            'monitor':           'monitor',
+            'assetCustodianEcno':'asset_custodian_ecno',
+            'userDivision':      'user_division',
+            'group':             'group_name',
+            'area':              'area',
+            'location':          'location',
+            'acmsFms':           'acms_fms',
+            'warranty':          'warranty',
+        }
+
+        for json_key, model_attr in EDITABLE.items():
+            if json_key in data:
+                setattr(pr, model_attr, data[json_key] or None)
+
+        # Handle fmsExpiryDate separately (date parsing)
+        if 'fmsExpiryDate' in data:
+            raw = (data['fmsExpiryDate'] or '').strip()
+            if raw:
+                try:
+                    from datetime import datetime as dt
+                    pr.fms_expiry_date = dt.strptime(raw[:10], '%Y-%m-%d').date()
+                except ValueError:
+                    pr.fms_expiry_date = None
+            else:
+                pr.fms_expiry_date = None
+
+        pr.updated_at = datetime.utcnow()
+        db.session.commit()
+        print(f'[INFO] Request {request_id} edited by {ecno} (level: {pr.status})')
+        return jsonify({'message': 'Asset details updated successfully.', 'request': pr.to_dict()}), 200
 
     @app.route('/api/assets/pending-requests', methods=['GET'])
     @jwt_required()

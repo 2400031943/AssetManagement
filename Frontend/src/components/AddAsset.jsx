@@ -30,9 +30,12 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
     }
   }, [open]);
 
-  // Search by name only
+  // Search by name or EC no.
   const filtered = query.trim()
-    ? list.filter(p => (p.name || '').toLowerCase().includes(query.toLowerCase()))
+    ? list.filter(p =>
+        (p.name || '').toLowerCase().includes(query.toLowerCase()) ||
+        (p.ecno || '').toLowerCase().includes(query.toLowerCase())
+      )
     : list;
 
   const handleSelect = (person) => {
@@ -108,7 +111,7 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
               onChange={e => setQuery(e.target.value)}
               onClick={stopPropOnClick ? e => e.stopPropagation() : undefined}
               onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } }}
-              placeholder="Search by name…"
+              placeholder="Search by name or EC No…"
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
                 color: '#e2e8f0', fontSize: '0.8rem',
@@ -295,42 +298,12 @@ function ListCheckBtn({ label, year, color, serialNumber }) {
   );
 }
 
-function RecommendationCard({ rec, isSelected, onClick, approversList, registrarsList, ddsList, onRequestAdd }) {
+function RecommendationCard({ rec, isSelected, onClick }) {
   const [expanded, setExpanded]     = React.useState(false);
-  const [showPanel, setShowPanel]   = React.useState(false); // approval dropdown panel
-  const [selApprover, setSelApprover] = React.useState(null);
-  const [selRegistrar, setSelRegistrar] = React.useState(null);
-  const [selDD, setSelDD]           = React.useState(null);
-  const [submitting, setSubmitting] = React.useState(false);
-  const [submitDone, setSubmitDone] = React.useState(null); // {success, message}
 
   const desc        = rec.configuration || '';
   const isLong      = desc.length > DESC_LIMIT;
   const displayDesc = expanded || !isLong ? desc : desc.slice(0, DESC_LIMIT) + '…';
-
-  const handleRequestAdd = async (e) => {
-    e.stopPropagation();
-    if (!selApprover || !selRegistrar || !selDD) {
-      alert('Please select Approver, Area Focal Point and Deputy Director.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await onRequestAdd(rec, selApprover, selRegistrar, selDD);
-      setSubmitDone({ success: true, message: '✓ Sent for approval!' });
-      setShowPanel(false);
-      setSelApprover(null); setSelRegistrar(null); setSelDD(null);
-    } catch (err) {
-      setSubmitDone({ success: false, message: err.message || 'Failed to send.' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Uses the top-level SearchablePersonSelect with stopPropOnClick=true (inside card)
-  const PersonDropdown = ({ label, list, selected, setter }) => (
-    <SearchablePersonSelect label={label} list={list} selected={selected} setter={setter} stopPropOnClick={true} />
-  );
 
   return (
     <div
@@ -364,70 +337,23 @@ function RecommendationCard({ rec, isSelected, onClick, approversList, registrar
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
           <ListCheckBtn label="2026 List?" year={2026} color="#60a5fa" serialNumber={rec.serialNumber} />
           <ListCheckBtn label="2027 List?" year={2027} color="#a78bfa" serialNumber={rec.serialNumber} />
-          {/* Request Add button */}
-          {submitDone ? (
-            <span style={{
-              fontSize: '0.68rem', fontWeight: 700, padding: '3px 9px', borderRadius: 6,
-              background: submitDone.success ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)',
-              color: submitDone.success ? '#22c55e' : '#ef4444',
-              border: `1px solid ${submitDone.success ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-            }}>{submitDone.message}</span>
-          ) : (
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); setShowPanel(v => !v); }}
-              style={{
-                background: showPanel ? 'rgba(245,158,11,0.15)' : 'rgba(251,191,36,0.08)',
-                color: '#f59e0b',
-                border: `1px solid ${showPanel ? 'rgba(245,158,11,0.5)' : 'rgba(251,191,36,0.3)'}`,
-                borderRadius: '6px', padding: '3px 9px',
-                fontSize: '0.68rem', fontWeight: 700,
-                cursor: 'pointer', transition: 'all 0.2s',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {showPanel ? '✕ Cancel' : '+ Request Add'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Inline approval panel (shown when showPanel=true) ── */}
-      {showPanel && !submitDone && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            background: 'rgba(108,99,255,0.07)', border: '1.5px solid rgba(108,99,255,0.25)',
-            borderRadius: 10, padding: '0.9rem 1rem', marginBottom: '0.75rem',
-          }}
-        >
-          <p style={{ margin: '0 0 0.7rem', fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 600 }}>
-            Select Approver, Area Focal Point &amp; DD to request adding this system to ACMS 2027 list:
-          </p>
-          <PersonDropdown label="Approver"             list={approversList}  selected={selApprover}  setter={setSelApprover} />
-          <PersonDropdown label="Area Focal Point"            list={registrarsList} selected={selRegistrar} setter={setSelRegistrar} />
-          <PersonDropdown label="Deputy Director (DD)" list={ddsList}        selected={selDD}        setter={setSelDD} />
           <button
             type="button"
-            onClick={handleRequestAdd}
-            disabled={submitting || !selApprover || !selRegistrar || !selDD}
+            onClick={e => { e.stopPropagation(); onClick(rec); }}
             style={{
-              width: '100%', padding: '0.55rem',
-              background: (!selApprover || !selRegistrar || !selDD) ? 'rgba(108,99,255,0.25)' : 'linear-gradient(135deg, #6c63ff, #a855f7)',
-              color: '#fff', border: 'none', borderRadius: 7,
-              fontSize: '0.85rem', fontWeight: 700,
-              cursor: submitting ? 'wait' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
-              opacity: submitting ? 0.7 : 1, marginTop: '0.25rem',
+              background: isSelected ? 'rgba(245,158,11,0.15)' : 'rgba(251,191,36,0.08)',
+              color: '#f59e0b',
+              border: `1px solid ${isSelected ? 'rgba(245,158,11,0.5)' : 'rgba(251,191,36,0.3)'}`,
+              borderRadius: '6px', padding: '3px 9px',
+              fontSize: '0.68rem', fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
             }}
           >
-            {submitting
-              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</>
-              : <><Send size={14} /> Send for Approval</>
-            }
+            {isSelected ? '✕ Close Form' : 'add into your ACMS List'}
           </button>
         </div>
-      )}
+      </div>
 
       {/* Clickable body — pre-fills form */}
       <button
@@ -484,22 +410,43 @@ function RecommendationCard({ rec, isSelected, onClick, approversList, registrar
 // ─────────────────────────────────────────────────────────────────────────────
 // Map an existing local asset back into form fields (for Edit mode)
 // ─────────────────────────────────────────────────────────────────────────────
+const STANDARD_MAKES = ['HP', 'Dell', 'Cisco', 'Sony', 'Toshiba', 'Konika', 'NetApp', 'HPE', 'NetASQ', 'D-link'];
+const STANDARD_MODELS = ['Power edge R 730', 'HP Compaq 8200 CM', 'HP ProDesk 600 G1'];
+const STANDARD_DOMAINS = ['Internet', 'SpaceNet', 'ASDMLAN', 'RSAA Data', 'Not in any Network'];
+const STANDARD_CATEGORIES = ['SERVER TYPE 1', 'SERVER TYPE 2', 'PC TYPE 1', 'PC TYPE 2', 'PC TYPE 3', 'PC TYPE 4', 'STORAGE TYPE 2', 'PRINTER TYPE 1', 'PRINTER TYPE 2', 'SP TYPE 1', 'SP TYPE 2'];
+
 function assetToForm(asset) {
+  const makeVal = asset.make || '';
+  const isCustomMake = makeVal !== '' && !STANDARD_MAKES.includes(makeVal);
+
+  const modelVal = asset.model || '';
+  const isCustomModel = modelVal !== '' && !STANDARD_MODELS.includes(modelVal);
+
+  const domainVal = asset.networkDomain || '';
+  const isCustomDomain = domainVal !== '' && !STANDARD_DOMAINS.includes(domainVal);
+
+  const catVal = asset.CATEGORY || '';
+  const isCustomCategory = catVal !== '' && !STANDARD_CATEGORIES.includes(catVal);
+
   return {
     ...EMPTY_FORM,
     assetNumber:        asset.assetNumber   || '',
     serialNumber:       asset.serialNumber  || '',
-    make:               asset.make          || '',
-    model:              asset.model         || '',
+    make:               isCustomMake ? 'Others' : makeVal,
+    makeOther:          isCustomMake ? makeVal : '',
+    model:              isCustomModel ? 'Others' : modelVal,
+    modelOther:         isCustomModel ? modelVal : '',
     configuration:      asset.configuration || '',
-    networkDomain:      asset.networkDomain || '',
+    networkDomain:      isCustomDomain ? 'Others' : domainVal,
+    networkDomainOther: isCustomDomain ? domainVal : '',
     ipAddress:          asset.ipAddress     || '',
     Monitor:            asset.Monitor       || '',
     AssetCustodianECNO: asset.AssetCustodianECNO || '',
     UserDivision:       asset.UserDivision  || '',
     GROUP:              asset.GROUP         || '',
     AREA:               asset.AREA          || '',
-    CATEGORY:           asset.CATEGORY      || '',
+    CATEGORY:           isCustomCategory ? 'Others' : catVal,
+    CATEGORYOther:      isCustomCategory ? catVal : '',
     LOCATION:           asset.LOCATION      || '',
     acmsFms:            asset.acmsFms       || '',
     warranty:           asset.warranty      || 'No',
@@ -1100,7 +1047,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
       <div className="section-header" style={{ marginBottom: '1.5rem' }}>
         <div>
           <h2 className="section-title" style={{ marginBottom: '0.25rem' }}>
-            {activeTabMode === 'coins-recommendations' ? 'COINS Recommendations' : 'Add System to ACMS List'}
+            {activeTabMode === 'coins-recommendations' ? 'Add From Coins' : 'Add System to ACMS List'}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
             {activeTabMode === 'coins-recommendations'
@@ -1206,10 +1153,6 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                   rec={rec}
                   isSelected={selectedRecId === rec.id}
                   onClick={handleCardClick}
-                  approversList={approversList}
-                  registrarsList={registrarsList}
-                  ddsList={ddsList}
-                  onRequestAdd={handleCoinsRequestAdd}
                 />
               ))}
 
@@ -1467,7 +1410,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
       )}
 
       {/* ── Form — only visible when formMode is set ('add' or 'edit') ──── */}
-      {activeTabMode === 'add-asset' && formMode && (
+      {(activeTabMode === 'add-asset' || activeTabMode === 'coins-recommendations') && formMode && (
         <div ref={formRef}>
           {/* Form mode header */}
           <div style={{
@@ -1512,32 +1455,6 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
 
         <div className="form-grid">
 
-          {/* CATEGORY */}
-          <div className="form-group">
-            <label>CATEGORY *</label>
-            <select name="CATEGORY" value={formData.CATEGORY} onChange={handleChange} required className="login-input">
-              <option value="">Select CATEGORY...</option>
-              <option>SERVER TYPE 1</option>
-              <option>SERVER TYPE 2</option>
-              <option>PC TYPE 1</option>
-              <option>PC TYPE 2</option>
-              <option>PC TYPE 3</option>
-              <option>PC TYPE 4</option>
-              <option>STORAGE TYPE 2</option>
-              <option>PRINTER TYPE 1</option>
-              <option>PRINTER TYPE 2</option>
-              <option>SP TYPE 1</option>
-              <option>SP TYPE 2</option>
-              <option value="Others">Others</option>
-            </select>
-          </div>
-          {formData.CATEGORY === 'Others' && (
-            <div className="form-group">
-              <label>Specify CATEGORY *</label>
-              <input type="text" name="CATEGORYOther" value={formData.CATEGORYOther} onChange={handleChange} required className="login-input" />
-            </div>
-          )}
-
           {/* Asset Number */}
           <div className="form-group">
             <label>Asset Number *</label>
@@ -1553,65 +1470,145 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
           {/* Make */}
           <div className="form-group">
             <label>Make *</label>
-            <select name="make" value={formData.make} onChange={handleChange} required className="login-input">
-              <option value="">Select Make...</option>
-              <option>HP</option>
-              <option>Dell</option>
-              <option>Cisco</option>
-              <option>Sony</option>
-              <option>Toshiba</option>
-              <option>Konika</option>
-              <option>NetApp</option>
-              <option>HPE</option>
-              <option>NetASQ</option>
-              <option>D-link</option>
-              <option value="Others">Others</option>
-            </select>
+            {formData.make === 'Others' ? (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  name="makeOther"
+                  value={formData.makeOther}
+                  onChange={handleChange}
+                  required
+                  className="login-input"
+                  placeholder="Enter Make manually..."
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, make: '', makeOther: '' }));
+                  }}
+                  style={{
+                    background: 'rgba(239,68,68,0.1)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                  title="Choose from list"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <select name="make" value={formData.make} onChange={handleChange} required className="login-input">
+                <option value="">Select Make...</option>
+                <option>HP</option>
+                <option>Dell</option>
+                <option>Cisco</option>
+                <option>Sony</option>
+                <option>Toshiba</option>
+                <option>Konika</option>
+                <option>NetApp</option>
+                <option>HPE</option>
+                <option>NetASQ</option>
+                <option>D-link</option>
+                <option value="Others">enter manually</option>
+              </select>
+            )}
           </div>
-          {formData.make === 'Others' && (
-            <div className="form-group">
-              <label>Specify Make *</label>
-              <input type="text" name="makeOther" value={formData.makeOther} onChange={handleChange} required className="login-input" />
-            </div>
-          )}
 
           {/* Model */}
           <div className="form-group">
             <label>Model *</label>
-            <select name="model" value={formData.model} onChange={handleChange} required className="login-input">
-              <option value="">Select Model...</option>
-              <option>Power edge R 730</option>
-              <option>HP Compaq 8200 CM</option>
-              <option>HP ProDesk 600 G1</option>
-              <option value="Others">Others</option>
-            </select>
+            {formData.model === 'Others' ? (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  name="modelOther"
+                  value={formData.modelOther}
+                  onChange={handleChange}
+                  required
+                  className="login-input"
+                  placeholder="Enter Model manually..."
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, model: '', modelOther: '' }));
+                  }}
+                  style={{
+                    background: 'rgba(239,68,68,0.1)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                  title="Choose from list"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <select name="model" value={formData.model} onChange={handleChange} required className="login-input">
+                <option value="">Select Model...</option>
+                <option>Power edge R 730</option>
+                <option>HP Compaq 8200 CM</option>
+                <option>HP ProDesk 600 G1</option>
+                <option value="Others">enter manually</option>
+              </select>
+            )}
           </div>
-          {formData.model === 'Others' && (
-            <div className="form-group">
-              <label>Specify Model *</label>
-              <input type="text" name="modelOther" value={formData.modelOther} onChange={handleChange} required className="login-input" />
-            </div>
-          )}
 
           {/* Network Domain */}
           <div className="form-group">
             <label>Network Domain</label>
-            <select name="networkDomain" value={formData.networkDomain} onChange={handleChange} className="login-input">
-              <option value="">Select Domain...</option>
-              <option>Internet</option>
-              <option>SpaceNet</option>
-              <option>ASDMLAN</option>
-              <option>RSAA Data</option>
-              <option>Not in any Network</option>
-              <option value="Others">Others</option>
-            </select>
+            {formData.networkDomain === 'Others' ? (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  name="networkDomainOther"
+                  value={formData.networkDomainOther}
+                  onChange={handleChange}
+                  className="login-input"
+                  placeholder="Enter Domain manually..."
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, networkDomain: '', networkDomainOther: '' }));
+                  }}
+                  style={{
+                    background: 'rgba(239,68,68,0.1)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                  title="Choose from list"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <select name="networkDomain" value={formData.networkDomain} onChange={handleChange} className="login-input">
+                <option value="">Select Domain...</option>
+                <option>Internet</option>
+                <option>SpaceNet</option>
+                <option>ASDMLAN</option>
+                <option>RSAA Data</option>
+                <option>Not in any Network</option>
+                <option value="Others">enter manually</option>
+              </select>
+            )}
           </div>
-          {formData.networkDomain === 'Others' && (
-            <div className="form-group">
-              <label>Specify Domain</label>
-              <input type="text" name="networkDomainOther" value={formData.networkDomainOther} onChange={handleChange} className="login-input" />
-            </div>
-          )}
 
           {/* IP Address — hidden when Not in any Network */}
           {formData.networkDomain !== 'Not in any Network' && (
@@ -1633,6 +1630,79 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
               placeholder="Describe the asset configuration…"
             />
           </div>
+
+          {/* CATEGORY */}
+          <div className="form-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ margin: 0 }}>CATEGORY *</label>
+              <button
+                type="button"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-primary, #6c63ff)',
+                  textDecoration: 'underline',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+                onClick={() => {
+                  alert('Functionality to know your system category will be configured here.');
+                }}
+              >
+                click here to know your system category
+              </button>
+            </div>
+            {formData.CATEGORY === 'Others' ? (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  name="CATEGORYOther"
+                  value={formData.CATEGORYOther}
+                  onChange={handleChange}
+                  required
+                  className="login-input"
+                  placeholder="Enter CATEGORY manually..."
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, CATEGORY: '', CATEGORYOther: '' }));
+                  }}
+                  style={{
+                    background: 'rgba(239,68,68,0.1)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                  title="Choose from list"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <select name="CATEGORY" value={formData.CATEGORY} onChange={handleChange} required className="login-input">
+                <option value="">Select CATEGORY...</option>
+                <option>SERVER TYPE 1</option>
+                <option>SERVER TYPE 2</option>
+                <option>PC TYPE 1</option>
+                <option>PC TYPE 2</option>
+                <option>PC TYPE 3</option>
+                <option>PC TYPE 4</option>
+                <option>STORAGE TYPE 2</option>
+                <option>PRINTER TYPE 1</option>
+                <option>PRINTER TYPE 2</option>
+                <option>SP TYPE 1</option>
+                <option>SP TYPE 2</option>
+                <option value="Others">enter manually</option>
+              </select>
+            )}
+          </div>
+
 
           {/* Monitor */}
           <div className="form-group">
@@ -1756,18 +1826,20 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
 
           {/* Select Category (ACMS/FMS) — options change based on warranty */}
           <div className="form-group">
-            <label>Select Category</label>
+            <label>ACMS/FMS</label>
             <select name="acmsFms" value={formData.acmsFms} onChange={handleChange} className="login-input">
-              <option value="">Select Category...</option>
+              <option value="">Select ACMS/FMS...</option>
               {formData.warranty === 'Yes' ? (
                 <>
                   <option value="System proposed for ACMS">System proposed for ACMS</option>
                   <option value="FMS Alone">FMS Alone</option>
+                  <option value="ACMS+FMS">ACMS+FMS</option>
                 </>
               ) : (
                 <>
                   <option value="ACMS">ACMS</option>
                   <option value="FMS Alone">FMS Alone</option>
+                  <option value="ACMS+FMS">ACMS+FMS</option>
                 </>
               )}
             </select>
