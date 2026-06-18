@@ -732,6 +732,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
   const [formMode, setFormMode]           = useState(null);
   const [editingAsset, setEditingAsset]   = useState(null);
   const formRef                           = useRef(null);
+  const [showCategoryGuide, setShowCategoryGuide] = useState(false);
 
   // ── COINS recommendations (remote DB)
   const [myRecs, setMyRecs]               = useState([]);
@@ -1846,19 +1847,19 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
               <button
                 type="button"
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent-primary, #6c63ff)',
-                  textDecoration: 'underline',
-                  fontSize: '0.8rem',
+                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  background: showCategoryGuide ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.07)',
+                  border: '1px solid rgba(99,102,241,0.35)',
+                  color: '#a5b4fc',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem', fontWeight: 700,
                   cursor: 'pointer',
-                  padding: 0
+                  padding: '3px 10px',
+                  transition: 'all 0.2s',
                 }}
-                onClick={() => {
-                  alert('Functionality to know your system category will be configured here.');
-                }}
+                onClick={() => setShowCategoryGuide(v => !v)}
               >
-                click here to know your system category
+                {showCategoryGuide ? '✕ Hide' : '📋 Click to know your system category'}
               </button>
             </div>
             {formData.CATEGORY === 'Others' ? (
@@ -1910,6 +1911,91 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
               </select>
             )}
           </div>
+
+          {/* ── Category Reference Guide Card (full-width) ── */}
+          {showCategoryGuide && (
+            <div style={{
+              gridColumn: '1 / -1',
+              background: '#ffffff',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: 12,
+              overflow: 'hidden',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              marginBottom: '0.5rem',
+            }}>
+              {/* Card header */}
+              <div style={{
+                background: 'linear-gradient(135deg, #4f46e5, #6c63ff)',
+                padding: '0.75rem 1rem',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>📋 System Category Reference</div>
+                  <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.72rem', marginTop: '0.1rem' }}>
+                    Identify your system type from the list below
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryGuide(false)}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9' }}>
+                      <th style={{ padding: '0.5rem 0.75rem', textAlign: 'center', fontWeight: 700, color: '#475569', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap', width: '48px' }}>SL No</th>
+                      <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left',   fontWeight: 700, color: '#475569', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>Category</th>
+                      <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left',   fontWeight: 700, color: '#475569', borderBottom: '2px solid #e2e8f0' }}>System Configuration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      [1,  'PC Type-1',        'Thin Clients'],
+                      [2,  'PC Type-2',        'All low end PCs like Core2duo / dual Core or equivalent PCs'],
+                      [3,  'PC Type-3',        'All desktops / industrial PCs with i3/i5/i7 or any equivalent or latest processors.'],
+                      [4,  'PC Type-4',        'Laptops, All-in-one PCs, Panel mount PCs with i3/i5/i7 or any equivalent or latest processors.'],
+                      [5,  'SP Type-1',        'Standalone LTO drives, LCD projectors, KVM switch with console'],
+                      [6,  'SP Type-2',        'A3 Plotters & A0 Plotters'],
+                      [7,  'Printer Type-1',   'A4 Black & White laser jet printers/scanners'],
+                      [8,  'Printer Type-2',   'A4 Color Laser jet Printers, Multi-function printers'],
+                      [9,  'Printer Type-3',   'A3 and other heavy-duty printers'],
+                      [10, 'WS Type-1',        'Workstations with 4 GB graphic cards or less'],
+                      [11, 'WS Type-2',        'Workstations with more than 4 GB graphic cards'],
+                      [12, 'Server Type-1',    'Rack Mount / Tower / Blade Servers'],
+                      [13, 'Server Type-2',    'Rack Mount / Tower / Blade Servers with 4 CPUs or more, Blade Chassis'],
+                      [14, 'Storage Type-1',   'Portable NAS systems and JBODs'],
+                      [15, 'Storage Type-2',   'Storage systems up to 100 TB capacity, Tape library with up to 50 media slots'],
+                      [16, 'Storage Type-3',   'Storage systems with more than 100 TB & up to 500 TB capacity, Tape library with more than 50 and up to 100 media slots'],
+                      [17, 'Storage Type-4',   'Storage systems with more than 500 TB capacity, Tape library with more than 100 media slots'],
+                      [18, 'NW Type-1',        '100/1000 Mbps Network switches'],
+                      [19, 'NW Type-2',        '100/1000 Mbps Network switches populated with 10G uplink'],
+                      [20, 'NW Type-3',        'Standalone 10G Edge Switches, TOR switches, Routers, SAN Switches'],
+                      [21, 'NW Type-4',        'Standalone Edge/TOR Switches with more than 10G port speed'],
+                      [22, 'NW Type-5',        'Chassis Core Switches, Chassis SAN Switches, Chassis Routers'],
+                      [23, 'NW Type-6',        'Network and Security Appliances viz., Network Firewall, IPS, Web Application Firewalls, Load Balancers'],
+                    ].map(([sl, cat, config], i) => (
+                      <tr
+                        key={sl}
+                        style={{ background: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#ede9fe'}
+                        onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#ffffff' : '#f8fafc'}
+                      >
+                        <td style={{ padding: '0.45rem 0.75rem', textAlign: 'center', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #f1f5f9' }}>{sl}</td>
+                        <td style={{ padding: '0.45rem 0.75rem', color: '#4f46e5', fontWeight: 700, borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>{cat}</td>
+                        <td style={{ padding: '0.45rem 0.75rem', color: '#334155', borderBottom: '1px solid #f1f5f9', lineHeight: 1.45 }}>{config}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
 
           {/* Monitor */}
