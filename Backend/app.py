@@ -9,6 +9,8 @@ from models import db, User, Asset, AcmsList2027, PendingRequest
 from datetime import date, datetime
 from sqlalchemy import func, text
 from auth import auth_bp
+import os
+import joblib
 
 
 # ===========================================================================
@@ -1174,6 +1176,86 @@ def create_app(config_class=Config):
             in_2027 = None
 
         return jsonify({'in_2026': in_2026, 'in_2027': in_2027}), 200
+
+
+    # ── ML: Predict system category from brief configuration ─────────────────
+    _ml_model = None
+
+    def _load_ml_model():
+        nonlocal _ml_model
+        if _ml_model is None:
+            model_path = os.path.join(os.path.dirname(__file__), 'ml', 'category_model.pkl')
+            if os.path.exists(model_path):
+                _ml_model = joblib.load(model_path)
+                print(f'[ML] Category model loaded from {model_path}')
+            else:
+                print(f'[ML] WARNING: model not found at {model_path}')
+        return _ml_model
+
+    # Pre-load on startup
+    try:
+        _load_ml_model()
+    except Exception as e:
+        print(f'[ML] Could not pre-load model: {e}')
+
+    @app.route('/api/predict-category', methods=['POST'])
+    @jwt_required()
+    def predict_category():
+        """
+        POST { "configuration": "<brief description text>" }
+        Returns:
+          {
+            "predicted": "PC Type-3",
+            "display":   "PC TYPE 3",
+            "confidence": 82.5,
+            "top3": [
+              {"label": "PC Type-3", "display": "PC TYPE 3", "confidence": 82.5},
+              ...
+            ]
+          }
+        """
+        body = request.get_json(silent=True) or {}
+        config_text = (body.get('configuration') or '').strip()
+        if not config_text:
+            return jsonify({'error': 'configuration text is required'}), 400
+
+        model_data = _load_ml_model()
+        if model_data is None:
+            return jsonify({'error': 'ML model not available. Run ml/train_model.py first.'}), 503
+
+        pipeline         = model_data['pipeline']
+        category_display = model_data['category_display']
+        labels           = model_data['labels']
+
+        try:
+            predicted_label = pipeline.predict([config_text])[0]
+            probs           = pipeline.predict_proba([config_text])[0]
+            classes         = pipeline.classes_
+
+            # Build top-3
+            top3_idx = sorted(range(len(probs)), key=lambda i: probs[i], reverse=True)[:3]
+            top3 = [
+                {
+                    'label':      classes[i],
+                    'display':    category_display.get(classes[i], classes[i].upper()),
+                    'confidence': round(probs[i] * 100, 1),
+                }
+                for i in top3_idx
+            ]
+
+            predicted_idx  = list(classes).index(predicted_label)
+            confidence     = round(probs[predicted_idx] * 100, 1)
+
+            return jsonify({
+                'predicted':   predicted_label,
+                'display':     category_display.get(predicted_label, predicted_label.upper()),
+                'confidence':  confidence,
+                'top3':        top3,
+            }), 200
+
+        except Exception as e:
+            print(f'[ML] Prediction error: {e}')
+            return jsonify({'error': f'Prediction failed: {str(e)}'}), 500
 
 
     @app.route('/api/admin/import-assets', methods=['POST'])

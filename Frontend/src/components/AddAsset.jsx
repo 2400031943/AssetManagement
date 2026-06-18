@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Sparkles, Database, Loader2, ServerCrash, CheckCircle2, Search, X, Pencil, LayoutDashboard, ListChecks, Send, ChevronDown, Trash2, User } from 'lucide-react';
-import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets, checkSerialInLists, requestAssetAdd, getDraftRequests, getPendingRequests, submitPendingRequests, getApprovers, getRegistrars, getDDs } from '../api';
+import { getAssetRecommendations, searchAssetRecommendations, getMyAssets, getMyAcms2027Assets, checkSerialInLists, requestAssetAdd, getDraftRequests, getPendingRequests, submitPendingRequests, getApprovers, getRegistrars, getDDs, predictCategory } from '../api';
 import '../pages/Dashboard.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -733,6 +733,11 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
   const [editingAsset, setEditingAsset]   = useState(null);
   const formRef                           = useRef(null);
   const [showCategoryGuide, setShowCategoryGuide] = useState(false);
+
+  // ── ML Category Prediction
+  const [predicting,   setPredicting]   = useState(false);
+  const [prediction,   setPrediction]   = useState(null);  // { predicted, display, confidence, top3 }
+  const [predError,    setPredError]    = useState(null);
 
   // ── COINS recommendations (remote DB)
   const [myRecs, setMyRecs]               = useState([]);
@@ -1829,15 +1834,154 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
 
           {/* Brief Configuration */}
           <div className="form-group full-width">
-            <label>Brief Configuration</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+              <label style={{ margin: 0 }}>Brief Configuration</label>
+              <button
+                type="button"
+                disabled={!formData.configuration || predicting}
+                onClick={async () => {
+                  if (!formData.configuration.trim()) return;
+                  setPredicting(true); setPredError(null); setPrediction(null);
+                  try {
+                    const res = await predictCategory(formData.configuration);
+                    setPrediction(res);
+                  } catch (e) {
+                    setPredError(e.message || 'Prediction failed.');
+                  } finally {
+                    setPredicting(false);
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.35rem',
+                  background: predicting ? 'rgba(99,102,241,0.1)' : 'linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.18))',
+                  border: '1.5px solid rgba(99,102,241,0.45)',
+                  color: (!formData.configuration || predicting) ? '#6b7280' : '#a5b4fc',
+                  borderRadius: '7px', fontSize: '0.72rem', fontWeight: 700,
+                  cursor: (!formData.configuration || predicting) ? 'not-allowed' : 'pointer',
+                  padding: '4px 11px', transition: 'all 0.2s',
+                }}
+              >
+                {predicting
+                  ? <><Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> Predicting…</>
+                  : <><Sparkles size={11} /> Predict System Category</>
+                }
+              </button>
+            </div>
+
             <textarea
               name="configuration"
               value={formData.configuration}
-              onChange={handleChange}
+              onChange={e => { handleChange(e); setPrediction(null); setPredError(null); }}
               className="login-input"
               rows="3"
-              placeholder="Describe the asset configuration…"
+              placeholder="Describe the asset configuration… (e.g. 'HP EliteBook laptop i5 SSD 8GB' or 'Cisco Nexus 10G TOR switch')"
             />
+
+            {/* ─ Prediction result card ─ */}
+            {predError && (
+              <div style={{
+                marginTop: '0.5rem', padding: '0.55rem 0.8rem',
+                background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: 8, fontSize: '0.78rem', color: '#fca5a5',
+              }}>
+                {predError}
+              </div>
+            )}
+
+            {prediction && (
+              <div style={{
+                marginTop: '0.6rem',
+                background: '#ffffff',
+                border: '1.5px solid #e0e7ff',
+                borderRadius: 10,
+                overflow: 'hidden',
+                boxShadow: '0 4px 16px rgba(99,102,241,0.1)',
+              }}>
+                {/* Header */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                  padding: '0.6rem 1rem',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Sparkles size={14} style={{ color: '#c4b5fd' }} />
+                    <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>ML Category Prediction</span>
+                  </div>
+                  <button type="button" onClick={() => setPrediction(null)}
+                    style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontSize: '0.7rem' }}
+                  >✕</button>
+                </div>
+
+                {/* Top prediction */}
+                <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '0.67rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>Best Match</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', color: '#4f46e5' }}>{prediction.predicted}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#475569' }}>{prediction.display}</span>
+                    {/* Confidence bar */}
+                    <div style={{ flex: 1, minWidth: 80 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#94a3b8', marginBottom: 2 }}>
+                        <span>Confidence</span>
+                        <span style={{ fontWeight: 700, color: prediction.confidence >= 70 ? '#22c55e' : prediction.confidence >= 45 ? '#f59e0b' : '#ef4444' }}>
+                          {prediction.confidence}%
+                        </span>
+                      </div>
+                      <div style={{ height: 5, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 3, transition: 'width 0.5s',
+                          width: `${prediction.confidence}%`,
+                          background: prediction.confidence >= 70 ? '#22c55e' : prediction.confidence >= 45 ? '#f59e0b' : '#ef4444',
+                        }} />
+                      </div>
+                    </div>
+                    {/* Apply button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, CATEGORY: prediction.display }));
+                        setPrediction(null);
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                        color: '#fff', border: 'none', borderRadius: 7,
+                        padding: '5px 14px', fontSize: '0.74rem', fontWeight: 700,
+                        cursor: 'pointer', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Apply Category
+                    </button>
+                  </div>
+                </div>
+
+                {/* Top 3 */}
+                {prediction.top3 && prediction.top3.length > 1 && (
+                  <div style={{ padding: '0.6rem 1rem' }}>
+                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Other Possibilities</div>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {prediction.top3.slice(1).map((alt, i) => (
+                        <button
+                          key={i} type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, CATEGORY: alt.display }));
+                            setPrediction(null);
+                          }}
+                          style={{
+                            background: '#f8fafc', border: '1px solid #e2e8f0',
+                            borderRadius: 6, padding: '4px 10px',
+                            fontSize: '0.7rem', cursor: 'pointer',
+                            color: '#475569', fontWeight: 600,
+                            display: 'flex', alignItems: 'center', gap: '0.3rem',
+                          }}
+                        >
+                          <span style={{ color: '#6366f1', fontFamily: 'monospace', fontWeight: 700 }}>{alt.label}</span>
+                          <span style={{ color: '#94a3b8' }}>{alt.confidence}%</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* CATEGORY */}

@@ -190,6 +190,20 @@ export async function checkSerialInLists(serialNumber) {
 }
 
 /**
+ * Predict the ACMS system category from a brief configuration description.
+ * Uses the trained TF-IDF + LinearSVC ML model on the backend.
+ * Returns { predicted, display, confidence, top3 }
+ * Always hits the real backend (ML model is local).
+ */
+export async function predictCategory(configurationText) {
+  if (!configurationText || !configurationText.trim()) return null;
+  return apiFetch('/predict-category', {
+    method: 'POST',
+    body: JSON.stringify({ configuration: configurationText.trim() }),
+  });
+}
+
+/**
  * Fetch asset recommendations from the remote cowmis database (ACMS$ / FMS$ tables).
  * These are shown on the Add Asset page so the user can quickly pre-fill the form.
  */
