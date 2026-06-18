@@ -328,6 +328,16 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
             {req.area        && <span>📍 {req.area}</span>}
             {req.userDivision && <span>🏢 {req.userDivision}</span>}
           </div>
+          {req.configuration && (
+            <div style={{
+              marginTop: "0.4rem", marginBottom: "0.2rem",
+              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 6, padding: "0.4rem 0.6rem",
+            }}>
+              <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.15rem" }}>Configuration</span>
+              <span style={{ color: "#e2e8f0", fontWeight: 600, fontSize: "0.8rem", wordBreak: "break-word", lineHeight: 1.4 }}>{req.configuration}</span>
+            </div>
+          )}
           <div style={{ marginTop: "0.3rem", fontSize: "0.73rem", color: "var(--text-muted)" }}>
             Requested by:{" "}
             <strong style={{ color: "#e2e8f0" }}>
@@ -446,12 +456,6 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
               <span style={{ color: "#1e293b", fontWeight: 600, fontSize: "0.8rem" }}>{val}</span>
             </div>
           ))}
-          {req.configuration && (
-            <div style={{ fontSize: "0.73rem", gridColumn: "1 / -1" }}>
-              <span style={{ color: "#64748b", display: "block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.1rem" }}>Configuration</span>
-              <span style={{ color: "#1e293b", fontWeight: 600, fontSize: "0.8rem", wordBreak: "break-word" }}>{req.configuration}</span>
-            </div>
-          )}
         </div>
       )}
 
