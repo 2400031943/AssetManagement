@@ -13,6 +13,16 @@ const STATUS_COLORS = {
   "DD Approved":        "#34d399",
 };
 
+// Maps internal DB status strings to user-facing labels
+const STATUS_LABELS = {
+  "Submitted":          "Submitted",
+  "Approver Approved":  "Approver Approved",
+  "Registrar Approved": "Area Focal Point Approved",
+  "DD Approved":        "DD Approved",
+  "Approved":           "Fully Approved",
+  "Rejected":           "Rejected",
+};
+
 // ─── small styled input ────────────────────────────────────────────────────
 function FInput({ label, value, onChange, type = "text", fullWidth = false, readOnly = false }) {
   return (
@@ -350,7 +360,7 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
           <span style={{
             background: accentColor + "20", color: accentColor, border: "1px solid " + accentColor + "44",
             borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem", fontWeight: 700,
-          }}>{req.status}</span>
+          }}>{STATUS_LABELS[req.status] || req.status}</span>
           <span style={{ fontSize: "0.72rem", color: "#a5b4fc", fontWeight: 600 }}>Awaiting: {myRole}</span>
         </div>
       </div>
