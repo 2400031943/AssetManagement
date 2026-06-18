@@ -2040,17 +2040,29 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
             ) : (
               <select name="CATEGORY" value={formData.CATEGORY} onChange={handleChange} required className="login-input">
                 <option value="">Select CATEGORY...</option>
-                <option>SERVER TYPE 1</option>
-                <option>SERVER TYPE 2</option>
                 <option>PC TYPE 1</option>
                 <option>PC TYPE 2</option>
                 <option>PC TYPE 3</option>
                 <option>PC TYPE 4</option>
-                <option>STORAGE TYPE 2</option>
-                <option>PRINTER TYPE 1</option>
-                <option>PRINTER TYPE 2</option>
                 <option>SP TYPE 1</option>
                 <option>SP TYPE 2</option>
+                <option>PRINTER TYPE 1</option>
+                <option>PRINTER TYPE 2</option>
+                <option>PRINTER TYPE 3</option>
+                <option>WS TYPE 1</option>
+                <option>WS TYPE 2</option>
+                <option>SERVER TYPE 1</option>
+                <option>SERVER TYPE 2</option>
+                <option>STORAGE TYPE 1</option>
+                <option>STORAGE TYPE 2</option>
+                <option>STORAGE TYPE 3</option>
+                <option>STORAGE TYPE 4</option>
+                <option>NW TYPE 1</option>
+                <option>NW TYPE 2</option>
+                <option>NW TYPE 3</option>
+                <option>NW TYPE 4</option>
+                <option>NW TYPE 5</option>
+                <option>NW TYPE 6</option>
                 <option value="Others">enter manually</option>
               </select>
             )}
