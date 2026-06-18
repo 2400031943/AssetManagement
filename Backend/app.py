@@ -796,7 +796,10 @@ def create_app(config_class=Config):
             remote_engine = db.engines.get('remote_pis')
             if remote_engine:
                 try:
-                    placeholders = ', '.join([f"'{e.strip().upper()}'" for e in unique_ecnos])
+                    param_keys = [f"ec_{i}" for i in range(len(unique_ecnos))]
+                    placeholders = ', '.join([f":{k}" for k in param_keys])
+                    params = {f"ec_{i}": e.strip().upper() for i, e in enumerate(unique_ecnos)}
+                    
                     q = text(f"""
                         SELECT
                             LTRIM(RTRIM(CAST(EMPLOYEECODE AS NVARCHAR(50))))  AS ecno,
@@ -805,7 +808,7 @@ def create_app(config_class=Config):
                         WHERE UPPER(LTRIM(RTRIM(CAST(EMPLOYEECODE AS NVARCHAR(50))))) IN ({placeholders})
                     """)
                     with remote_engine.connect() as conn:
-                        for row in conn.execute(q).mappings().all():
+                        for row in conn.execute(q, params).mappings().all():
                             key = (row.get('ecno') or '').strip().upper()
                             emp_name_map[key] = (row.get('emp_name') or '').strip()
                 except Exception as ex:
@@ -1090,48 +1093,86 @@ def create_app(config_class=Config):
     @jwt_required()
     def get_my_acms2027_assets():
         """
-        Return assets from dbo.ACMS_list_2027 where asset_custodian_ecno
-        matches the logged-in employee's ECNO.
-        Returns [] gracefully if the table doesn't exist on this machine.
+        Return rows from dbo.ACMS_list_2027 where asset_custodian_ecno
+        matches the logged-in user's emp_code (case-insensitive, trimmed).
+        Returns 500 with error detail if query fails (instead of silent []).
         """
         current_user_id = int(get_jwt_identity())
         current_user    = User.query.get_or_404(current_user_id)
         employee_code   = (current_user.emp_code or '').strip().upper()
 
+        print(f"[ACMS2027] Fetching for user_id={current_user_id}, emp_code='{employee_code}'")
+
         if not employee_code:
+            print("[ACMS2027] emp_code is empty - returning []")
             return jsonify([]), 200
 
         try:
-            rows = AcmsList2027.query.filter(
-                func.upper(func.ltrim(func.rtrim(AcmsList2027.asset_custodian_ecno))) == employee_code
-            ).all()
-            result = []
+            # Use raw SQL to avoid any ORM column-mapping issues and confirm exact column names
+            raw_sql = text("""
+                SELECT
+                    id,
+                    asset_number,
+                    serial_number,
+                    category,
+                    make,
+                    model,
+                    configuration,
+                    network_domain,
+                    ip_address,
+                    monitor,
+                    asset_custodian_ecno,
+                    user_division,
+                    group_name,
+                    area,
+                    location,
+                    acms_fms,
+                    warranty,
+                    fms_expiry_date,
+                    status
+                FROM dbo.ACMS_list_2027
+                WHERE UPPER(LTRIM(RTRIM(CAST(asset_custodian_ecno AS NVARCHAR(100))))) = :emp_code
+            """)
+
+            with db.engine.connect() as conn:
+                result = conn.execute(raw_sql, {'emp_code': employee_code})
+                rows   = result.fetchall()
+                keys   = result.keys()
+
+            print(f"[ACMS2027] Found {len(rows)} rows for emp_code='{employee_code}'")
+
+            output = []
             for r in rows:
-                result.append({
-                    'id':                  r.id,
-                    'assetNumber':         r.asset_number,
-                    'serialNumber':        r.serial_number,
-                    'CATEGORY':            r.category,
-                    'make':                r.make,
-                    'model':               r.model,
-                    'configuration':       r.configuration,
-                    'networkDomain':       r.network_domain,
-                    'ipAddress':           r.ip_address,
-                    'Monitor':             r.monitor,
-                    'AssetCustodianECNO':  r.asset_custodian_ecno,
-                    'UserDivision':        r.user_division,
-                    'GROUP':               r.group_name,
-                    'AREA':                r.area,
-                    'LOCATION':            r.location,
-                    'acmsFms':             r.acms_fms,
-                    'warranty':            r.warranty,
-                    'fmsExpiryDate':       r.fms_expiry_date.isoformat() if r.fms_expiry_date else None,
-                    'status':              r.status,
+                row_dict = dict(zip(keys, r))
+                fms_date = row_dict.get('fms_expiry_date')
+                output.append({
+                    'id':                  row_dict.get('id'),
+                    'assetNumber':         row_dict.get('asset_number'),
+                    'serialNumber':        row_dict.get('serial_number'),
+                    'CATEGORY':            row_dict.get('category'),
+                    'make':                row_dict.get('make'),
+                    'model':               row_dict.get('model'),
+                    'configuration':       row_dict.get('configuration'),
+                    'networkDomain':       row_dict.get('network_domain'),
+                    'ipAddress':           row_dict.get('ip_address'),
+                    'Monitor':             row_dict.get('monitor'),
+                    'AssetCustodianECNO':  row_dict.get('asset_custodian_ecno'),
+                    'UserDivision':        row_dict.get('user_division'),
+                    'GROUP':               row_dict.get('group_name'),
+                    'AREA':               row_dict.get('area'),
+                    'LOCATION':            row_dict.get('location'),
+                    'acmsFms':             row_dict.get('acms_fms'),
+                    'warranty':            row_dict.get('warranty'),
+                    'fmsExpiryDate':       fms_date.isoformat() if fms_date else None,
+                    'status':              row_dict.get('status'),
                 })
-            return jsonify(result), 200
+
+            return jsonify(output), 200
+
         except Exception as e:
-            print(f"[ACMS2027] Could not query dbo.ACMS_list_2027: {e}")
-            return jsonify([]), 200
+            print(f"[ACMS2027] ERROR querying dbo.ACMS_list_2027: {e}")
+            # Return the actual error so it shows up in frontend and logs
+            return jsonify({'error': str(e)}), 500
 
 
     @app.route('/api/assets/check-in-lists', methods=['GET'])
