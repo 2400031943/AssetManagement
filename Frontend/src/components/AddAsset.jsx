@@ -58,12 +58,12 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
 
   const baseBox = {
     width: '100%', padding: '0.42rem 2.2rem 0.42rem 0.7rem',
-    background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.18)',
+    background: 'rgba(15,12,40,0.75)', border: '1.5px solid rgba(99,102,241,0.35)',
     borderRadius: 7, color: '#e2e8f0', fontSize: '0.82rem', cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     position: 'relative', userSelect: 'none', minHeight: '2rem',
     transition: 'border-color 0.2s',
-    ...(open ? { borderColor: 'var(--accent-primary, #6c63ff)' } : {}),
+    ...(open ? { borderColor: '#6c63ff' } : {}),
   };
 
   return (
@@ -76,18 +76,18 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
       <div style={baseBox} onClick={handleToggle}>
         {selected ? (
           <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
-            <span style={{ fontWeight: 700, color: '#a5b4fc' }}>{selected.ecno}</span>
-            {' · '}{selected.name}
-            {selected.designation && <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72rem' }}> · {selected.designation}</span>}
+            <span style={{ fontWeight: 700, color: '#c4b5fd' }}>{selected.ecno}</span>
+            <span style={{ color: '#f1f5f9', marginLeft: 4 }}>{selected.name}</span>
+            {selected.designation && <span style={{ color: '#94a3b8', fontSize: '0.72rem', marginLeft: 4 }}> · {selected.designation}</span>}
           </span>
         ) : (
-          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem' }}>-- Select {label} --</span>
+          <span style={{ color: 'rgba(226,232,240,0.45)', fontSize: '0.8rem' }}>-- Select {label} --</span>
         )}
         <span style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 2 }}>
           {selected && (
-            <span onClick={handleClear} title="Clear" style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', padding: '0 2px' }}>✕</span>
+            <span onClick={handleClear} title="Clear" style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '0.75rem', padding: '0 2px' }}>✕</span>
           )}
-          <ChevronDown size={13} style={{ color: 'rgba(255,255,255,0.4)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          <ChevronDown size={13} style={{ color: '#94a3b8', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
         </span>
       </div>
 
@@ -180,8 +180,8 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
       {selected && (
         <div style={{
           marginTop: '0.5rem',
-          background: 'rgba(108,99,255,0.08)',
-          border: '1.5px solid rgba(108,99,255,0.28)',
+          background: 'rgba(15,12,40,0.85)',
+          border: '1.5px solid rgba(108,99,255,0.45)',
           borderRadius: 8,
           padding: '0.65rem 0.85rem',
           display: 'flex',
@@ -191,30 +191,30 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
           {/* Header row: check icon + name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <CheckCircle2 size={13} style={{ color: '#a5b4fc', flexShrink: 0 }} />
-            <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.88rem' }}>{selected.name}</span>
+            <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.88rem' }}>{selected.name}</span>
           </div>
           {/* Detail rows */}
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: '0.18rem', columnGap: '0.7rem', paddingLeft: 19 }}>
-            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>EC No.</span>
-            <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: 700, color: '#a5b4fc' }}>{selected.ecno}</span>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>EC No.</span>
+            <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: 700, color: '#c4b5fd' }}>{selected.ecno}</span>
 
             {selected.designation && <>
-              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>Designation</span>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>Designation</span>
               <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>{selected.designation}</span>
             </>}
 
             {selected.groupName && <>
-              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>Group</span>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>Group</span>
               <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>{selected.groupName}</span>
             </>}
 
             {selected.divisionName && <>
-              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>Division</span>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>Division</span>
               <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>{selected.divisionName}</span>
             </>}
 
             {selected.sectionName && <>
-              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>Section</span>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>Section</span>
               <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>{selected.sectionName}</span>
             </>}
           </div>

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Send, Loader2, ChevronDown } from "lucide-react";
 import {
   getDraftRequests,
@@ -38,12 +38,12 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
 
   const baseBox = {
     width: "100%", padding: "0.42rem 2.2rem 0.42rem 0.7rem",
-    background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.18)",
+    background: "rgba(15,12,40,0.75)", border: "1.5px solid rgba(99,102,241,0.35)",
     borderRadius: 7, color: "#e2e8f0", fontSize: "0.82rem", cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "space-between",
     position: "relative", userSelect: "none", minHeight: "2rem",
     transition: "border-color 0.2s",
-    ...(open ? { borderColor: "var(--accent-primary, #6c63ff)" } : {}),
+    ...(open ? { borderColor: "#6c63ff" } : {}),
   };
 
   return (
@@ -54,18 +54,18 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
       <div style={baseBox} onClick={() => setOpen(v => !v)}>
         {selected ? (
           <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.8rem" }}>
-            <span style={{ fontWeight: 700, color: "#a5b4fc" }}>{selected.ecno}</span>
-            {" · "}{selected.name}
-            {selected.designation && <span style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.72rem" }}> · {selected.designation}</span>}
+            <span style={{ fontWeight: 700, color: "#c4b5fd" }}>{selected.ecno}</span>
+            <span style={{ color: "#f1f5f9", marginLeft: 4 }}>{selected.name}</span>
+            {selected.designation && <span style={{ color: "#94a3b8", fontSize: "0.72rem", marginLeft: 4 }}> · {selected.designation}</span>}
           </span>
         ) : (
-          <span style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.8rem" }}>-- Select {label} --</span>
+          <span style={{ color: "rgba(226,232,240,0.45)", fontSize: "0.8rem" }}>-- Select {label} --</span>
         )}
         <span style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", display: "flex", gap: 2 }}>
           {selected && (
-            <span onClick={handleClear} title="Clear" style={{ cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: "0.75rem", padding: "0 2px" }}>x</span>
+            <span onClick={handleClear} title="Clear" style={{ cursor: "pointer", color: "#94a3b8", fontSize: "0.75rem", padding: "0 2px" }}>x</span>
           )}
-          <ChevronDown size={13} style={{ color: "rgba(255,255,255,0.4)", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+          <ChevronDown size={13} style={{ color: "#94a3b8", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
         </span>
       </div>
 
@@ -98,15 +98,16 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
                 style={{
                   padding: "0.45rem 0.8rem", cursor: "pointer", fontSize: "0.8rem",
                   borderBottom: "1px solid rgba(255,255,255,0.06)",
-                  background: selected && selected.ecno === p.ecno ? "rgba(108,99,255,0.2)" : "transparent",
+                  background: selected && selected.ecno === p.ecno ? "rgba(108,99,255,0.3)" : "transparent",
                   transition: "background 0.15s",
+                  color: "#e2e8f0",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(108,99,255,0.12)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = (selected && selected.ecno === p.ecno) ? "rgba(108,99,255,0.2)" : "transparent"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(108,99,255,0.18)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = (selected && selected.ecno === p.ecno) ? "rgba(108,99,255,0.3)" : "transparent"; }}
               >
-                <span style={{ fontWeight: 700, color: "#a5b4fc", marginRight: 6 }}>{p.ecno}</span>
-                {p.name}
-                {p.designation && <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem" }}> · {p.designation}</span>}
+                <span style={{ fontWeight: 700, color: "#c4b5fd", marginRight: 6 }}>{p.ecno}</span>
+                <span style={{ color: "#f1f5f9" }}>{p.name}</span>
+                {p.designation && <span style={{ color: "#94a3b8", fontSize: "0.72rem" }}> · {p.designation}</span>}
               </div>
             ))}
           </div>

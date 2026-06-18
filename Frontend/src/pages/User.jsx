@@ -22,7 +22,7 @@ export default function User() {
   const footerCode        = currentUser.employeeCode        || currentUser.EMPLOYEECODE  || currentUser.emp_code || employeeCode;
   const footerDesignation = currentUser.employeeDesignation || currentUser.DESGFULLNAME  || '';
   
-  const [activeTab, setActiveTab] = useState('approval-pending');
+  const [activeTab, setActiveTab] = useState('my-assets');
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -121,10 +121,6 @@ export default function User() {
         </div>
 
         <nav className="sidebar-nav">
-          <button className={`nav-item ${activeTab === 'approval-pending' ? 'active' : ''}`} onClick={() => handleTabChange('approval-pending')}>
-            <Clock size={20} /><span>Sent To Approval List</span>
-          </button>
-          
           {showPendingApprovalsTab && (
             <button className={`nav-item ${activeTab === 'pending-approvals' ? 'active' : ''}`} onClick={() => handleTabChange('pending-approvals')}>
               <ShieldCheck size={20} /><span>Pending For My Approval</span>
@@ -148,6 +144,9 @@ export default function User() {
           </button>
           <button className={`nav-item ${activeTab === 'where-is-my-asset' ? 'active' : ''}`} onClick={() => handleTabChange('where-is-my-asset')}>
             <MapPin size={20} /><span>Where is my Asset?</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'approval-pending' ? 'active' : ''}`} onClick={() => handleTabChange('approval-pending')}>
+            <Clock size={20} /><span>Sent To Approval List</span>
           </button>
         </nav>
 
