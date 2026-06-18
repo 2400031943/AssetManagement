@@ -2006,66 +2006,21 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                 {showCategoryGuide ? '✕ Hide' : '📋 Click to know your system category'}
               </button>
             </div>
-            {formData.CATEGORY === 'Others' ? (
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  name="CATEGORYOther"
-                  value={formData.CATEGORYOther}
-                  onChange={handleChange}
-                  required
-                  className="login-input"
-                  placeholder="Enter CATEGORY manually..."
-                  style={{ flex: 1 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev, CATEGORY: '', CATEGORYOther: '' }));
-                  }}
-                  style={{
-                    background: 'rgba(239,68,68,0.1)',
-                    color: '#ef4444',
-                    border: '1px solid rgba(239,68,68,0.3)',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    fontSize: '0.85rem'
-                  }}
-                  title="Choose from list"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <select name="CATEGORY" value={formData.CATEGORY} onChange={handleChange} required className="login-input">
-                <option value="">Select CATEGORY...</option>
-                <option>PC TYPE 1</option>
-                <option>PC TYPE 2</option>
-                <option>PC TYPE 3</option>
-                <option>PC TYPE 4</option>
-                <option>SP TYPE 1</option>
-                <option>SP TYPE 2</option>
-                <option>PRINTER TYPE 1</option>
-                <option>PRINTER TYPE 2</option>
-                <option>PRINTER TYPE 3</option>
-                <option>WS TYPE 1</option>
-                <option>WS TYPE 2</option>
-                <option>SERVER TYPE 1</option>
-                <option>SERVER TYPE 2</option>
-                <option>STORAGE TYPE 1</option>
-                <option>STORAGE TYPE 2</option>
-                <option>STORAGE TYPE 3</option>
-                <option>STORAGE TYPE 4</option>
-                <option>NW TYPE 1</option>
-                <option>NW TYPE 2</option>
-                <option>NW TYPE 3</option>
-                <option>NW TYPE 4</option>
-                <option>NW TYPE 5</option>
-                <option>NW TYPE 6</option>
-                <option value="Others">enter manually</option>
-              </select>
-            )}
+            <input
+              type="text"
+              name="CATEGORY"
+              value={formData.CATEGORY}
+              readOnly
+              required
+              className="login-input"
+              placeholder="Use Predictor or Guide below to select..."
+              style={{
+                background: '#f8fafc',
+                color: formData.CATEGORY ? '#4f46e5' : '#94a3b8',
+                fontWeight: formData.CATEGORY ? 700 : 400,
+                cursor: 'not-allowed'
+              }}
+            />
           </div>
 
           {/* ── Category Reference Guide Card (full-width) ── */}
@@ -2138,7 +2093,12 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                     ].map(([sl, cat, config], i) => (
                       <tr
                         key={sl}
-                        style={{ background: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}
+                        onClick={() => {
+                          const formattedCategory = cat.toUpperCase().replace('-', ' ');
+                          setFormData(prev => ({ ...prev, CATEGORY: formattedCategory }));
+                          setShowCategoryGuide(false);
+                        }}
+                        style={{ background: i % 2 === 0 ? '#ffffff' : '#f8fafc', cursor: 'pointer', transition: 'background 0.2s' }}
                         onMouseEnter={e => e.currentTarget.style.background = '#ede9fe'}
                         onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#ffffff' : '#f8fafc'}
                       >
