@@ -28,8 +28,8 @@ function FInput({ label, value, onChange, type = "text", fullWidth = false, read
   return (
     <div style={{ gridColumn: fullWidth ? "1 / -1" : undefined }}>
       <label style={{
-        display: "block", fontSize: "0.68rem", color: "var(--text-muted)",
-        marginBottom: "0.2rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em",
+        display: "block", fontSize: "0.68rem", color: "#64748b",
+        marginBottom: "0.2rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
       }}>{label}</label>
       <input
         type={type}
@@ -38,13 +38,13 @@ function FInput({ label, value, onChange, type = "text", fullWidth = false, read
         readOnly={readOnly}
         style={{
           width: "100%", padding: "0.42rem 0.6rem", boxSizing: "border-box",
-          background: readOnly ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.07)",
-          border: "1.5px solid rgba(255,255,255,0.12)",
-          borderRadius: 7, color: readOnly ? "var(--text-muted)" : "#e2e8f0",
+          background: readOnly ? "#f1f5f9" : "#ffffff",
+          border: "1.5px solid #cbd5e1",
+          borderRadius: 7, color: readOnly ? "#64748b" : "#1e293b",
           fontSize: "0.8rem", outline: "none", transition: "border-color 0.2s",
         }}
-        onFocus={e => !readOnly && (e.target.style.borderColor = "rgba(108,99,255,0.6)")}
-        onBlur={e  => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
+        onFocus={e => !readOnly && (e.target.style.borderColor = "#6c63ff")}
+        onBlur={e  => (e.target.style.borderColor = "#cbd5e1")}
       />
     </div>
   );
@@ -54,16 +54,16 @@ function FSelect({ label, value, onChange, options }) {
   return (
     <div>
       <label style={{
-        display: "block", fontSize: "0.68rem", color: "var(--text-muted)",
-        marginBottom: "0.2rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em",
+        display: "block", fontSize: "0.68rem", color: "#64748b",
+        marginBottom: "0.2rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
       }}>{label}</label>
       <select
         value={value || ""}
         onChange={e => onChange(e.target.value)}
         style={{
           width: "100%", padding: "0.42rem 0.6rem", boxSizing: "border-box",
-          background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.12)",
-          borderRadius: 7, color: "#e2e8f0", fontSize: "0.8rem", outline: "none",
+          background: "#ffffff", border: "1.5px solid #cbd5e1",
+          borderRadius: 7, color: "#1e293b", fontSize: "0.8rem", outline: "none",
           cursor: "pointer",
         }}
       >
@@ -78,8 +78,8 @@ function FTextarea({ label, value, onChange }) {
   return (
     <div style={{ gridColumn: "1 / -1" }}>
       <label style={{
-        display: "block", fontSize: "0.68rem", color: "var(--text-muted)",
-        marginBottom: "0.2rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em",
+        display: "block", fontSize: "0.68rem", color: "#64748b",
+        marginBottom: "0.2rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
       }}>{label}</label>
       <textarea
         value={value || ""}
@@ -87,8 +87,8 @@ function FTextarea({ label, value, onChange }) {
         rows={3}
         style={{
           width: "100%", padding: "0.42rem 0.6rem", boxSizing: "border-box",
-          background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.12)",
-          borderRadius: 7, color: "#e2e8f0", fontSize: "0.8rem", outline: "none",
+          background: "#ffffff", border: "1.5px solid #cbd5e1",
+          borderRadius: 7, color: "#1e293b", fontSize: "0.8rem", outline: "none",
           resize: "vertical", fontFamily: "inherit",
         }}
       />
@@ -137,20 +137,20 @@ function EditForm({ req, onSave, onCancel }) {
 
   return (
     <div style={{
-      background: "rgba(108,99,255,0.05)", border: "1.5px solid rgba(108,99,255,0.25)",
+      background: "#f8fafc", border: "1.5px solid #e2e8f0",
       borderRadius: 12, padding: "1rem 1.1rem", marginTop: "0.75rem",
     }}>
       {/* Edit header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          <Pencil size={14} style={{ color: "#a5b4fc" }} />
-          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#a5b4fc" }}>
+          <Pencil size={14} style={{ color: "#6c63ff" }} />
+          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#4f46e5" }}>
             Editing Asset Details
           </span>
         </div>
         <button
           onClick={onCancel}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.35)", padding: 2 }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 2 }}
         >
           <X size={16} />
         </button>
@@ -215,8 +215,8 @@ function EditForm({ req, onSave, onCancel }) {
           disabled={saving}
           style={{
             flex: 1, padding: "0.55rem", borderRadius: 8, cursor: "pointer",
-            background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.12)",
-            color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600,
+            background: "#f1f5f9", border: "1.5px solid #cbd5e1",
+            color: "#64748b", fontSize: "0.82rem", fontWeight: 600,
           }}
         >
           Cancel
@@ -426,7 +426,9 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
       {expanded && mode !== "edit" && (
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
-          gap: "0.4rem", padding: "0.75rem", background: "rgba(255,255,255,0.03)",
+          gap: "0.5rem", padding: "0.85rem 1rem",
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
           borderRadius: 8, marginBottom: "0.75rem",
         }}>
           {[
@@ -440,14 +442,14 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
             ["Warranty Expiry",req.fmsExpiryDate],  ["Custodian ECNO",req.assetCustodianEcno],
           ].filter(([, v]) => v).map(([label, val]) => (
             <div key={label} style={{ fontSize: "0.73rem" }}>
-              <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.67rem" }}>{label}</span>
-              <span style={{ color: "#e2e8f0", fontWeight: 500 }}>{val}</span>
+              <span style={{ color: "#64748b", display: "block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.1rem" }}>{label}</span>
+              <span style={{ color: "#1e293b", fontWeight: 600, fontSize: "0.8rem" }}>{val}</span>
             </div>
           ))}
           {req.configuration && (
             <div style={{ fontSize: "0.73rem", gridColumn: "1 / -1" }}>
-              <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.67rem" }}>Configuration</span>
-              <span style={{ color: "#e2e8f0", fontWeight: 500, wordBreak: "break-word" }}>{req.configuration}</span>
+              <span style={{ color: "#64748b", display: "block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.1rem" }}>Configuration</span>
+              <span style={{ color: "#1e293b", fontWeight: 600, fontSize: "0.8rem", wordBreak: "break-word" }}>{req.configuration}</span>
             </div>
           )}
         </div>
@@ -471,9 +473,10 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
             onChange={e => setRemarks(e.target.value)}
             rows={2}
             style={{
-              width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 8, color: "#e2e8f0", fontSize: "0.82rem", padding: "0.5rem 0.7rem",
+              width: "100%", background: "#ffffff", border: "1.5px solid #cbd5e1",
+              borderRadius: 8, color: "#1e293b", fontSize: "0.82rem", padding: "0.5rem 0.7rem",
               resize: "vertical", marginTop: "0.65rem", marginBottom: "0.75rem", boxSizing: "border-box",
+              fontFamily: "inherit",
             }}
           />
           <div style={{ display: "flex", gap: "0.75rem" }}>
