@@ -1853,9 +1853,9 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.35rem',
-                  background: predicting ? 'rgba(99,102,241,0.1)' : 'linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.18))',
-                  border: '1.5px solid rgba(99,102,241,0.45)',
-                  color: (!formData.configuration || predicting) ? '#6b7280' : '#a5b4fc',
+                  background: predicting ? 'rgba(34,197,94,0.1)' : 'linear-gradient(135deg,rgba(34,197,94,0.18),rgba(21,128,61,0.18))',
+                  border: '1.5px solid rgba(34,197,94,0.45)',
+                  color: (!formData.configuration || predicting) ? '#6b7280' : '#86efac',
                   borderRadius: '7px', fontSize: '0.72rem', fontWeight: 700,
                   cursor: (!formData.configuration || predicting) ? 'not-allowed' : 'pointer',
                   padding: '4px 11px', transition: 'all 0.2s',
@@ -1892,19 +1892,19 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
               <div style={{
                 marginTop: '0.6rem',
                 background: '#ffffff',
-                border: '1.5px solid #e0e7ff',
+                border: '1.5px solid #dcfce7',
                 borderRadius: 10,
                 overflow: 'hidden',
-                boxShadow: '0 4px 16px rgba(99,102,241,0.1)',
+                boxShadow: '0 4px 16px rgba(34,197,94,0.1)',
               }}>
                 {/* Header */}
                 <div style={{
-                  background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                  background: 'linear-gradient(135deg, #16a34a, #15803d)',
                   padding: '0.6rem 1rem',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Sparkles size={14} style={{ color: '#c4b5fd' }} />
+                    <Sparkles size={14} style={{ color: '#86efac' }} />
                     <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>ML Category Prediction</span>
                   </div>
                   <button type="button" onClick={() => setPrediction(null)}
@@ -1916,7 +1916,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                 <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ fontSize: '0.67rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>Best Match</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', color: '#4f46e5' }}>{prediction.predicted}</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', color: '#16a34a' }}>{prediction.predicted}</span>
                     <span style={{ fontSize: '0.75rem', color: '#475569' }}>{prediction.display}</span>
                     {/* Confidence bar */}
                     <div style={{ flex: 1, minWidth: 80 }}>
@@ -1942,7 +1942,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                         setPrediction(null);
                       }}
                       style={{
-                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                        background: 'linear-gradient(135deg, #16a34a, #15803d)',
                         color: '#fff', border: 'none', borderRadius: 7,
                         padding: '5px 14px', fontSize: '0.74rem', fontWeight: 700,
                         cursor: 'pointer', whiteSpace: 'nowrap',
@@ -1973,7 +1973,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                             display: 'flex', alignItems: 'center', gap: '0.3rem',
                           }}
                         >
-                          <span style={{ color: '#6366f1', fontFamily: 'monospace', fontWeight: 700 }}>{alt.label}</span>
+                          <span style={{ color: '#22c55e', fontFamily: 'monospace', fontWeight: 700 }}>{alt.label}</span>
                           <span style={{ color: '#94a3b8' }}>{alt.confidence}%</span>
                         </button>
                       ))}
@@ -1992,9 +1992,9 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                 type="button"
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.3rem',
-                  background: showCategoryGuide ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.07)',
-                  border: '1px solid rgba(99,102,241,0.35)',
-                  color: '#a5b4fc',
+                  background: showCategoryGuide ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.07)',
+                  border: '1px solid rgba(34,197,94,0.35)',
+                  color: '#86efac',
                   borderRadius: '6px',
                   fontSize: '0.72rem', fontWeight: 700,
                   cursor: 'pointer',
@@ -2016,7 +2016,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
               placeholder="Use Predictor or Guide below to select..."
               style={{
                 background: '#f8fafc',
-                color: formData.CATEGORY ? '#4f46e5' : '#94a3b8',
+                color: formData.CATEGORY ? '#16a34a' : '#94a3b8',
                 fontWeight: formData.CATEGORY ? 700 : 400,
                 cursor: 'not-allowed'
               }}
@@ -2036,7 +2036,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
             }}>
               {/* Card header */}
               <div style={{
-                background: 'linear-gradient(135deg, #4f46e5, #6c63ff)',
+                background: 'linear-gradient(135deg, #16a34a, #15803d)',
                 padding: '0.75rem 1rem',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
@@ -2099,11 +2099,11 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                           setShowCategoryGuide(false);
                         }}
                         style={{ background: i % 2 === 0 ? '#ffffff' : '#f8fafc', cursor: 'pointer', transition: 'background 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#ede9fe'}
+                        onMouseEnter={e => e.currentTarget.style.background = '#dcfce7'}
                         onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#ffffff' : '#f8fafc'}
                       >
                         <td style={{ padding: '0.45rem 0.75rem', textAlign: 'center', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid #f1f5f9' }}>{sl}</td>
-                        <td style={{ padding: '0.45rem 0.75rem', color: '#4f46e5', fontWeight: 700, borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>{cat}</td>
+                        <td style={{ padding: '0.45rem 0.75rem', color: '#16a34a', fontWeight: 700, borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>{cat}</td>
                         <td style={{ padding: '0.45rem 0.75rem', color: '#334155', borderBottom: '1px solid #f1f5f9', lineHeight: 1.45 }}>{config}</td>
                       </tr>
                     ))}
