@@ -294,13 +294,15 @@ function recommendationToForm(rec) {
 // ─────────────────────────────────────────────────────────────────────────────
 const DESC_LIMIT = 120;
 
-// Status values for each check button: null | 'loading' | true | false | 'error'
+// Status values for each check button: null | 'loading' | true | false | 'error' | 'no-serial'
 function ListCheckBtn({ label, year, color, serialNumber }) {
-  const [status, setStatus] = React.useState(null); // null=idle loading=loading true/false=result 'error'=error
+  const [status,  setStatus]  = React.useState(null);
+  const [tooltip, setTooltip] = React.useState(false);
 
   const handleClick = async (e) => {
     e.stopPropagation();
     if (status === 'loading') return;
+    if (!serialNumber) { setStatus('no-serial'); return; }
     setStatus('loading');
     try {
       const res = await checkSerialInLists(serialNumber);
@@ -318,34 +320,84 @@ function ListCheckBtn({ label, year, color, serialNumber }) {
     btnLabel = label;
   } else if (status === 'loading') {
     bg = 'rgba(255,255,255,0.05)'; textColor = color; border = `1px solid ${color}40`;
-    btnLabel = '…';
+    btnLabel = 'Checking…';
   } else if (status === true) {
-    bg = 'rgba(34,197,94,0.12)'; textColor = '#22c55e'; border = '1px solid rgba(34,197,94,0.35)';
-    btnLabel = `✓ In ${year} List`;
+    bg = 'rgba(34,197,94,0.15)'; textColor = '#16a34a'; border = '1.5px solid rgba(34,197,94,0.5)';
+    btnLabel = year === 2027 ? '✓ In ACMS_list_2027' : `✓ In ${year} List`;
   } else if (status === false) {
-    bg = 'rgba(239,68,68,0.1)'; textColor = '#ef4444'; border = '1px solid rgba(239,68,68,0.3)';
-    btnLabel = `✗ Not in ${year}`;
+    bg = 'rgba(239,68,68,0.12)'; textColor = '#dc2626'; border = '1.5px solid rgba(239,68,68,0.4)';
+    btnLabel = year === 2027 ? '✗ Not in 2027 List' : `✗ Not in ${year}`;
+  } else if (status === 'no-serial') {
+    bg = 'rgba(251,191,36,0.1)'; textColor = '#d97706'; border = '1px solid rgba(251,191,36,0.3)';
+    btnLabel = 'No Serial No.';
   } else {
-    bg = 'rgba(251,191,36,0.1)'; textColor = '#f59e0b'; border = '1px solid rgba(251,191,36,0.3)';
+    bg = 'rgba(251,191,36,0.1)'; textColor = '#d97706'; border = '1px solid rgba(251,191,36,0.3)';
     btnLabel = 'Unavailable';
   }
 
+  const titleText = year === 2027
+    ? `Check if serial number "${serialNumber || '—'}" exists in ACMS_list_2027 (local DB)`
+    : `Check if serial number "${serialNumber || '—'}" is in the ${year} ACMS list`;
+
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      title={`Check if serial number is in ACMS_list_${year}`}
-      style={{
-        background: bg, color: textColor, border, borderRadius: '6px',
-        padding: '3px 9px', fontSize: '0.68rem', fontWeight: 700,
-        cursor: status === 'loading' ? 'wait' : 'pointer',
-        transition: 'all 0.2s', whiteSpace: 'nowrap', letterSpacing: '0.02em',
-        display: 'flex', alignItems: 'center', gap: '4px',
-      }}
-    >
-      {status === 'loading' ? <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} /> : null}
-      {btnLabel}
-    </button>
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <button
+        type="button"
+        onClick={handleClick}
+        onMouseEnter={() => setTooltip(true)}
+        onMouseLeave={() => setTooltip(false)}
+        title={titleText}
+        style={{
+          background: bg, color: textColor, border, borderRadius: '6px',
+          padding: '3px 9px', fontSize: '0.68rem', fontWeight: 700,
+          cursor: status === 'loading' ? 'wait' : 'pointer',
+          transition: 'all 0.2s', whiteSpace: 'nowrap', letterSpacing: '0.02em',
+          display: 'flex', alignItems: 'center', gap: '4px',
+        }}
+      >
+        {status === 'loading' ? <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+        {btnLabel}
+      </button>
+
+      {/* Tooltip showing serial number */}
+      {tooltip && status === null && serialNumber && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 5px)', left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(15,12,40,0.97)', color: '#f1f5f9',
+          border: '1px solid rgba(108,99,255,0.4)',
+          borderRadius: 6, padding: '4px 8px',
+          fontSize: '0.65rem', whiteSpace: 'nowrap',
+          zIndex: 9999, pointerEvents: 'none',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+        }}>
+          {year === 2027 ? 'Search in ACMS_list_2027' : `Search in ${year} list`}
+          <br />
+          <span style={{ color: '#a5b4fc', fontFamily: 'monospace' }}>SN: {serialNumber}</span>
+        </div>
+      )}
+
+      {/* Result tooltip */}
+      {tooltip && (status === true || status === false) && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 5px)', left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(15,12,40,0.97)', color: '#f1f5f9',
+          border: `1px solid ${status === true ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
+          borderRadius: 6, padding: '4px 8px',
+          fontSize: '0.65rem', whiteSpace: 'nowrap',
+          zIndex: 9999, pointerEvents: 'none',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+        }}>
+          <span style={{ fontFamily: 'monospace', color: '#a5b4fc' }}>{serialNumber}</span>
+          <br />
+          {status === true
+            ? <span style={{ color: '#22c55e' }}>✓ Present in {year === 2027 ? 'ACMS_list_2027' : `${year} list`}</span>
+            : <span style={{ color: '#f87171' }}>✗ Not found in {year === 2027 ? 'ACMS_list_2027' : `${year} list`}</span>
+          }
+        </div>
+      )}
+    </div>
   );
 }
 
