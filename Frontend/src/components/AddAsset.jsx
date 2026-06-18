@@ -987,14 +987,11 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
       setFormMode(null);
       setEditingAsset(null);
       const successMsg = formMode === 'edit'
-        ? '✓ Saved as draft! Your updated asset details are in the "Ready to Send" section below — select it and send for approval.'
-        : '✓ Saved as draft! Go to "Ready to Send" section below to send for approval.';
+        ? '✓ Saved as draft! Go to "Ready to Send" in the sidebar to select it and send for approval.'
+        : '✓ Saved as draft! Click "Ready to Send" in the sidebar to send for approval.';
       setStatus({ type: 'success', message: successMsg });
       fetchDrafts();
-      setTimeout(() => {
-        document.getElementById('ready-to-send-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 400);
-      setTimeout(() => setStatus({ type: null, message: '' }), 5000);
+      setTimeout(() => setStatus({ type: null, message: '' }), 7000);
     } catch (err) {
       setStatus({ type: 'error', message: err.message || 'Operation failed. Please try again.' });
     }
@@ -1908,129 +1905,6 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
           </form>
         </div>
       )}{/* /formMode */}
-
-      {/* ══ READY TO SEND APPROVAL REQUEST SECTION ═══════════════════════════ */}
-      {activeTabMode === 'add-asset' && (
-        <div id="ready-to-send-section" className="glass-panel" style={{ marginTop: '2rem', padding: '1.4rem' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Send size={20} style={{ color: '#f59e0b' }} />
-              <h3 style={{ margin: 0, fontSize: '1rem', color: '#f59e0b', fontWeight: 700 }}>
-                Ready to Send Approval Request
-              </h3>
-              {drafts.length > 0 && (
-                <span style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', borderRadius: 20, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>
-                  {drafts.length}
-                </span>
-              )}
-            </div>
-            <button onClick={fetchDrafts} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '4px 12px', color: 'var(--text-muted)', fontSize: '0.78rem', cursor: 'pointer' }}>↻ Refresh</button>
-          </div>
-
-          {/* Loading */}
-          {draftsLoading && <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', padding: '1rem 0' }}><Loader2 size={16} style={{ animation: 'spin 1s linear infinite', marginRight: 6 }} />Loading drafts…</div>}
-
-          {/* Empty */}
-          {!draftsLoading && drafts.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem', border: '1.5px dashed rgba(255,255,255,0.1)', borderRadius: 10 }}>
-              No drafts yet. Fill the form above and click <strong>Save as Draft</strong> to add systems here.
-            </div>
-          )}
-
-          {/* Send result banner */}
-          {sendResult && (
-            <div style={{ padding: '0.7rem 1rem', borderRadius: 8, marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600,
-              background: sendResult.success ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-              color: sendResult.success ? '#22c55e' : '#ef4444',
-              border: `1px solid ${sendResult.success ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
-              {sendResult.success ? '✓ ' : '✗ '}{sendResult.message}
-            </div>
-          )}
-
-          {/* Draft cards */}
-          {!draftsLoading && drafts.length > 0 && (
-            <div>
-              {/* Select All */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <input type="checkbox"
-                  checked={selectedDraftIds.size === drafts.length && drafts.length > 0}
-                  onChange={e => setSelectedDraftIds(e.target.checked ? new Set(drafts.map(d => d.id)) : new Set())}
-                  style={{ accentColor: '#f59e0b', width: 16, height: 16, cursor: 'pointer' }}
-                />
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select All ({drafts.length})</span>
-                {selectedDraftIds.size > 0 && <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>{selectedDraftIds.size} selected</span>}
-              </div>
-
-              {drafts.map(d => (
-                <div key={d.id} onClick={() => toggleDraft(d.id)} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
-                  background: selectedDraftIds.has(d.id) ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.03)',
-                  border: `1.5px solid ${selectedDraftIds.has(d.id) ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                  borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '0.6rem', cursor: 'pointer', transition: 'all 0.2s',
-                }}>
-                  <input type="checkbox" checked={selectedDraftIds.has(d.id)} onChange={() => toggleDraft(d.id)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ accentColor: '#f59e0b', width: 16, height: 16, cursor: 'pointer', marginTop: 3, flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.9rem', color: '#e2e8f0' }}>{d.assetNumber || d.serialNumber || `Draft #${d.id}`}</span>
-                      {d.serialNumber && d.assetNumber && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>· SN: {d.serialNumber}</span>}
-                      <span style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 20, padding: '1px 7px', fontSize: '0.65rem', fontWeight: 700 }}>Draft</span>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {d.category && <span>📂 {d.category}</span>}
-                      {d.make && <span>🏭 {d.make} {d.model || ''}</span>}
-                      {d.area && <span>📍 {d.area}</span>}
-                      {d.userDivision && <span>🏢 {d.userDivision}</span>}
-                      {d.createdAt && <span>🕐 {new Date(d.createdAt).toLocaleDateString('en-IN')}</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Approval panel — shown when ≥1 draft selected */}
-          {selectedDraftIds.size > 0 && (
-            <div style={{ marginTop: '1.2rem', padding: '1.2rem', background: 'rgba(108,99,255,0.06)', border: '1.5px solid rgba(108,99,255,0.2)', borderRadius: 12 }}>
-              <h4 style={{ margin: '0 0 1rem', color: '#a5b4fc', fontSize: '0.95rem', fontWeight: 700 }}>Select Approvers for {selectedDraftIds.size} request(s)</h4>
-
-              {dropdownsLoading && <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Loading personnel…</div>}
-
-              {!dropdownsLoading && [
-                { label: 'Approver',             list: approversList,  selected: selectedApprover,  setter: setSelectedApprover  },
-                { label: 'Area Focal Point',      list: registrarsList, selected: selectedRegistrar, setter: setSelectedRegistrar },
-                { label: 'Deputy Director (DD)',  list: ddsList,        selected: selectedDD,        setter: setSelectedDD        },
-              ].map(({ label, list, selected, setter }) => (
-                <SearchablePersonSelect
-                  key={label}
-                  label={label}
-                  list={list}
-                  selected={selected}
-                  setter={setter}
-                />
-              ))}
-
-              <button
-                onClick={handleSendForApproval}
-                disabled={sendingForApproval || !selectedApprover || !selectedRegistrar || !selectedDD}
-                style={{
-                  width: '100%', padding: '0.75rem',
-                  background: (!selectedApprover || !selectedRegistrar || !selectedDD) ? 'rgba(108,99,255,0.3)' : 'linear-gradient(135deg, #6c63ff, #a855f7)',
-                  color: '#fff', border: 'none', borderRadius: 8,
-                  fontSize: '0.95rem', fontWeight: 700, cursor: sendingForApproval ? 'wait' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                  opacity: sendingForApproval ? 0.7 : 1,
-                }}
-              >
-                {sendingForApproval ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</> : <><Send size={16} /> Send {selectedDraftIds.size} Request(s) for Approval</>}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
     </div>
   );

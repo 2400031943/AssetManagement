@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LogOut, Database, LayoutDashboard, PlusCircle, Sparkles, Clock, ShieldCheck, MapPin, Trash2 } from 'lucide-react';
+import { LogOut, Database, LayoutDashboard, PlusCircle, Sparkles, Clock, ShieldCheck, MapPin, Trash2, Send } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { getMyAssets, createAsset, updateAsset, getCurrentUserProfile } from '../api';
 import { getStoredSession, clearStoredSession, setStoredSession } from '../authSession';
@@ -9,6 +9,7 @@ import ApprovalPending from '../components/ApprovalPending';
 import PendingApprovals from '../components/PendingApprovals';
 import WhereIsMyAsset from '../components/WhereIsMyAsset';
 import DeleteAsset from '../components/DeleteAsset';
+import ReadyToSend from '../components/ReadyToSend';
 import './Dashboard.css';
 
 export default function User() {
@@ -139,6 +140,9 @@ export default function User() {
           <button className={`nav-item ${activeTab === 'coins-recommendations' ? 'active' : ''}`} onClick={() => handleTabChange('coins-recommendations')}>
             <Sparkles size={20} /><span>Add From Coins</span>
           </button>
+          <button className={`nav-item ${activeTab === 'ready-to-send' ? 'active' : ''}`} onClick={() => handleTabChange('ready-to-send')}>
+            <Send size={20} /><span>Ready to Send</span>
+          </button>
           <button className={`nav-item ${activeTab === 'delete-asset' ? 'active' : ''}`} onClick={() => handleTabChange('delete-asset')}>
             <Trash2 size={20} /><span>Delete Asset from ACMS List</span>
           </button>
@@ -186,6 +190,7 @@ export default function User() {
         )}
         {activeTab === 'where-is-my-asset' && <WhereIsMyAsset />}
         {activeTab === 'delete-asset'       && <DeleteAsset />}
+        {activeTab === 'ready-to-send'      && <ReadyToSend />}
       </main>
     </div>
   );
