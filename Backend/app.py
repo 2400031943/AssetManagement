@@ -785,7 +785,35 @@ def create_app(config_class=Config):
 
         rows = PendingRequest.query.filter(or_(*filters)) \
                                    .order_by(PendingRequest.created_at.asc()).all()
-        return jsonify([r.to_dict() for r in rows]), 200
+
+        # ── Enrich with requester EMPLOYEENAME from remote VIEWEMPINFO ──────
+        result = [r.to_dict() for r in rows]
+        unique_ecnos = list({r['requesterEcno'] for r in result if r.get('requesterEcno')})
+        emp_name_map = {}
+        if unique_ecnos:
+            remote_engine = db.engines.get('remote_pis')
+            if remote_engine:
+                try:
+                    placeholders = ', '.join([f"'{e.strip().upper()}'" for e in unique_ecnos])
+                    q = text(f"""
+                        SELECT
+                            LTRIM(RTRIM(CAST(EMPLOYEECODE AS NVARCHAR(50))))  AS ecno,
+                            LTRIM(RTRIM(CAST(EMPLOYEENAME AS NVARCHAR(200)))) AS emp_name
+                        FROM VIEWEMPINFO
+                        WHERE UPPER(LTRIM(RTRIM(CAST(EMPLOYEECODE AS NVARCHAR(50))))) IN ({placeholders})
+                    """)
+                    with remote_engine.connect() as conn:
+                        for row in conn.execute(q).mappings().all():
+                            key = (row.get('ecno') or '').strip().upper()
+                            emp_name_map[key] = (row.get('emp_name') or '').strip()
+                except Exception as ex:
+                    print(f'[WARN] Could not enrich requester names from VIEWEMPINFO: {ex}')
+
+        for item in result:
+            ecno_key = (item.get('requesterEcno') or '').strip().upper()
+            item['requesterEmployeeName'] = emp_name_map.get(ecno_key) or item.get('requesterName') or ecno_key
+
+        return jsonify(result), 200
 
     @app.route('/api/assets/pending-requests/<int:request_id>/approve', methods=['POST'])
     @jwt_required()

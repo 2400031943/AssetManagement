@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck, CheckCircle2, XCircle, Loader2, AlertCircle,
   ChevronDown, ChevronUp, Pencil, Save, X, RotateCcw
@@ -319,7 +319,15 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
             {req.userDivision && <span>🏢 {req.userDivision}</span>}
           </div>
           <div style={{ marginTop: "0.3rem", fontSize: "0.73rem", color: "var(--text-muted)" }}>
-            Requested by: <strong style={{ color: "#e2e8f0" }}>{req.requesterName || req.requesterEcno}</strong>
+            Requested by:{" "}
+            <strong style={{ color: "#e2e8f0" }}>
+              {req.requesterEmployeeName || req.requesterName || req.requesterEcno}
+            </strong>
+            {req.requesterEcno && (
+              <span style={{ marginLeft: "0.4rem", fontFamily: "monospace", color: "#a5b4fc", fontSize: "0.68rem" }}>
+                ({req.requesterEcno})
+              </span>
+            )}
             {req.createdAt && <span style={{ marginLeft: "0.5rem" }}>· {new Date(req.createdAt).toLocaleDateString("en-IN")}</span>}
           </div>
           {/* Requester reason (delete requests) */}
