@@ -712,11 +712,17 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
   // ── Pending requests (for exclusion filtering)
   const [pendingRequests, setPendingRequests] = useState([]);
 
-  // ── Search state
+  // ── Search state (COINS cards search bar)
   const [searchQ, setSearchQ]             = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching]         = useState(false);
   const searchTimer                       = useRef(null);
+
+  // ── Serial-number → Asset-number lookup (Add System form only)
+  const [snLookupQ,       setSnLookupQ]       = useState('');
+  const [snLookupResults, setSnLookupResults] = useState([]);
+  const [snLookupLoading, setSnLookupLoading] = useState(false);
+  const snLookupTimer                         = useRef(null);
 
   // ── Exclusion sets derived from drafts and pending requests
   // Items in drafts OR pending should not appear in 2026 ACMS Recommendations
@@ -827,6 +833,24 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
     }, 400);
     return () => clearTimeout(searchTimer.current);
   }, [searchQ]);
+
+  // Debounced serial-number → asset-number lookup (TBST_ASSETS EQSRLNO → ASSETNO)
+  useEffect(() => {
+    if (snLookupTimer.current) clearTimeout(snLookupTimer.current);
+    if (!snLookupQ.trim()) { setSnLookupResults([]); setSnLookupLoading(false); return; }
+    setSnLookupLoading(true);
+    snLookupTimer.current = setTimeout(async () => {
+      try {
+        const data = await searchAssetRecommendations(snLookupQ.trim());
+        setSnLookupResults(Array.isArray(data) ? data.filter(r => r.assetNumber) : []);
+      } catch {
+        setSnLookupResults([]);
+      } finally {
+        setSnLookupLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(snLookupTimer.current);
+  }, [snLookupQ]);
 
   // ── Form handlers ──────────────────────────────────────────────────────────
   const handleChange = (e) => {
@@ -1500,6 +1524,90 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
 
           {/* ── Asset Form ─────────────────────────────────────────── */}
           <form className="asset-form glass-panel" onSubmit={handleSubmit}>
+
+            {/* ── Find Asset Number from COINS (only on Add System page) ── */}
+            {activeTabMode === 'add-asset' && (
+              <div style={{
+                marginBottom: '1.2rem',
+                padding: '1rem 1.1rem',
+                background: 'rgba(99,102,241,0.07)',
+                border: '1.5px solid rgba(99,102,241,0.28)',
+                borderRadius: 10,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.55rem' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#a5b4fc', letterSpacing: '0.03em' }}>
+                    🔍 Find Asset Number from COINS
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    — enter Serial Number to auto-fill Asset Number
+                  </span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={snLookupQ}
+                    onChange={e => { setSnLookupQ(e.target.value); setSnLookupResults([]); }}
+                    placeholder="Enter Serial Number (EQSRLNO)…"
+                    className="login-input"
+                    style={{ paddingRight: snLookupLoading ? '2.4rem' : undefined }}
+                  />
+                  {snLookupLoading && (
+                    <span style={{
+                      position: 'absolute', right: '0.7rem', top: '50%', transform: 'translateY(-50%)',
+                      fontSize: '0.75rem', color: 'var(--text-muted)',
+                    }}>⏳</span>
+                  )}
+                </div>
+
+                {/* Results dropdown */}
+                {snLookupResults.length > 0 && (
+                  <div style={{
+                    marginTop: '0.4rem',
+                    background: 'rgba(15,12,40,0.95)',
+                    border: '1.5px solid rgba(99,102,241,0.4)',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    boxShadow: '0 6px 24px rgba(0,0,0,0.4)',
+                  }}>
+                    {snLookupResults.map((r, i) => (
+                      <div
+                        key={i}
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, assetNumber: r.assetNumber || '' }));
+                          setSnLookupQ('');
+                          setSnLookupResults([]);
+                        }}
+                        style={{
+                          padding: '0.55rem 0.9rem',
+                          cursor: 'pointer',
+                          borderBottom: i < snLookupResults.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                          transition: 'background 0.15s',
+                          display: 'flex', flexDirection: 'column', gap: '0.15rem',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.18)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Asset No.</span>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.9rem', color: '#c4b5fd' }}>{r.assetNumber}</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>· SN: {r.serialNumber}</span>
+                        </div>
+                        {r.configuration && (
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', paddingLeft: 2 }}>{r.configuration}</span>
+                        )}
+                        <span style={{ fontSize: '0.65rem', color: '#6c63ff', fontWeight: 600 }}>↵ Click to fill Asset Number</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {snLookupQ.trim() && !snLookupLoading && snLookupResults.length === 0 && (
+                  <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0.3rem 0.2rem' }}>
+                    No matching asset found for that serial number.
+                  </div>
+                )}
+              </div>
+            )}
 
         <div className="form-grid">
 
