@@ -228,13 +228,64 @@ function SearchablePersonSelect({ label, list, selected, setter, stopPropOnClick
 // Helper: map a COINS recommendation → form field values
 // ─────────────────────────────────────────────────────────────────────────────
 function recommendationToForm(rec) {
+  // Helper: detect if a value is a non-standard option requiring "Others"
+  const isCustomMake     = (v) => v && !['HP','Dell','Cisco','Sony','Toshiba','Konika','NetApp','HPE','NetASQ','D-link'].includes(v);
+  const isCustomModel    = (v) => v && !['Power edge R 730','HP Compaq 8200 CM','HP ProDesk 600 G1'].includes(v);
+  const isCustomDomain   = (v) => v && !['Internet','SpaceNet','ASDMLAN','RSAA Data','Not in any Network'].includes(v);
+  const isCustomCategory = (v) => v && !['SERVER TYPE 1','SERVER TYPE 2','PC TYPE 1','PC TYPE 2','PC TYPE 3','PC TYPE 4','STORAGE TYPE 2','PRINTER TYPE 1','PRINTER TYPE 2','SP TYPE 1','SP TYPE 2'].includes(v);
+  const isCustomDiv      = (v) => v && !['ITID','DPFD','ASAG','RSAA','ASCID'].includes(v);
+  const isCustomGroup    = (v) => v && !['SISG','SPFPG','ASAG','RSAA'].includes(v);
+  const isCustomArea     = (v) => v && !['DPA','RSA'].includes(v);
+  const isCustomLoc      = (v) => v && !['Balanagar','ASAG','RSAA'].includes(v);
+
+  const makeVal     = rec.make      || '';
+  const modelVal    = rec.model     || '';
+  const domainVal   = rec.networkDomain || '';
+  const catVal      = rec.CATEGORY  || '';
+  const divVal      = rec.UserDivision || '';
+  const groupVal    = rec.GROUP     || '';
+  const areaVal     = rec.AREA      || '';
+  const locVal      = rec.LOCATION  || '';
+  const monitorVal  = rec.Monitor   || '';
+
   return {
     ...EMPTY_FORM,
-    assetNumber:   rec.assetNumber   || '',
-    serialNumber:  rec.serialNumber  || '',
-    configuration: rec.configuration || '',
+    assetNumber:        rec.assetNumber        || '',
+    serialNumber:       rec.serialNumber       || '',
+    configuration:      rec.configuration      || '',
+    AssetCustodianECNO: rec.AssetCustodianECNO || rec.asset_custodian_ecno || '',
+    // Make
+    make:               isCustomMake(makeVal)      ? 'Others'  : makeVal,
+    makeOther:          isCustomMake(makeVal)      ? makeVal   : '',
+    // Model
+    model:              isCustomModel(modelVal)    ? 'Others'  : modelVal,
+    modelOther:         isCustomModel(modelVal)    ? modelVal  : '',
+    // Network Domain
+    networkDomain:      isCustomDomain(domainVal)  ? 'Others'  : domainVal,
+    networkDomainOther: isCustomDomain(domainVal)  ? domainVal : '',
+    ipAddress:          rec.ipAddress     || '',
+    // Category
+    CATEGORY:           isCustomCategory(catVal)   ? 'Others'  : catVal,
+    CATEGORYOther:      isCustomCategory(catVal)   ? catVal    : '',
+    // Monitor
+    Monitor:            monitorVal && monitorVal !== 'NIL' && monitorVal !== 'Custom' ? 'Custom' : (monitorVal || ''),
+    MonitorCustom:      monitorVal && monitorVal !== 'NIL' ? monitorVal : '',
+    // Org fields
+    UserDivision:       isCustomDiv(divVal)        ? 'Others'  : divVal,
+    UserDivisionOther:  isCustomDiv(divVal)        ? divVal    : '',
+    GROUP:              isCustomGroup(groupVal)     ? 'Others'  : groupVal,
+    GROUPOther:         isCustomGroup(groupVal)     ? groupVal  : '',
+    AREA:               isCustomArea(areaVal)       ? 'Others'  : areaVal,
+    AREAOther:          isCustomArea(areaVal)       ? areaVal   : '',
+    LOCATION:           isCustomLoc(locVal)         ? 'Others'  : locVal,
+    LOCATIONOther:      isCustomLoc(locVal)         ? locVal    : '',
+    // Compliance
+    warranty:           rec.warranty      || 'No',
+    warrantyExpiry:     rec.fmsExpiryDate || rec.warrantyExpiryDate || '',
+    acmsFms:            rec.acmsFms       || '',
   };
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Recommendation Card — ASSETNO + EQSRLNO side-by-side, EQPTDESCP collapsible
@@ -400,7 +451,7 @@ function RecommendationCard({ rec, isSelected, onClick }) {
 
         {/* CTA */}
         <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--accent-primary, #6c63ff)', fontWeight: 600 }}>
-          {isSelected ? '✓ Selected — Asset No., Serial No. & Configuration pre-filled' : 'Click to pre-fill Asset No., Serial No. & Configuration →'}
+          {isSelected ? '✓ Selected — All available fields pre-filled in the form below' : 'Click to open the full Add System form with all available fields pre-filled →'}
         </div>
       </button>
     </div>
@@ -1426,7 +1477,7 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                 {formMode === 'edit'
                   ? 'Update the fields below and click "Save as Draft" — it will appear in the Ready to Send section for approval.'
-                  : 'Fields pre-filled from COINS. Complete remaining details.'}
+                  : 'All available fields have been pre-filled from COINS data. Review, complete any remaining fields, then save as Draft.'}
               </p>
             </div>
             <button
