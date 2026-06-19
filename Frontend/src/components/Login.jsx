@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BadgeCheck, Lock, User, Shield, ArrowRight, CheckCircle2, AlertCircle, Database } from 'lucide-react';
 import { useNavigate } from '../routes';
 import { login as apiLogin } from '../api';
-import { setStoredSession } from '../authSession';
+import { setStoredSession, clearStoredSession } from '../authSession';
 import './Login.css';
 
 export default function Login() {
@@ -45,13 +45,32 @@ export default function Login() {
         area: user.area || null,
       }, token);
 
+      const dbRole = user.role; // 'Admin' | 'AreaAdmin' | 'User'
+
+      // If "Admin" tab selected — enforce that user must have Admin role in DB
       if (role === 'admin') {
+        if (dbRole !== 'Admin') {
+          setStatus({ type: 'error', message: 'Access denied. You do not have Admin privileges.' });
+          clearStoredSession();
+          return;
+        }
         setStatus({ type: 'success', message: 'Admin Authentication successful!' });
         setTimeout(() => navigate('/admin'), 600);
+        return;
+      }
+
+      // "User" tab — redirect based on actual DB role
+      if (dbRole === 'Admin') {
+        setStatus({ type: 'success', message: 'Welcome! Loading Admin dashboard…' });
+        setTimeout(() => navigate('/admin'), 600);
+      } else if (dbRole === 'AreaAdmin') {
+        setStatus({ type: 'success', message: 'Welcome! Loading Area Admin dashboard…' });
+        setTimeout(() => navigate('/area-admin'), 600);
       } else {
-        setStatus({ type: 'success', message: 'Welcome back! Loading your asset dashboard...' });
+        setStatus({ type: 'success', message: 'Welcome back! Loading your asset dashboard…' });
         setTimeout(() => navigate('/user'), 600);
       }
+
     } catch (err) {
       setStatus({ type: 'error', message: err.message || 'Authentication failed.' });
     } finally {
