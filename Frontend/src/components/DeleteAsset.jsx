@@ -159,11 +159,11 @@ function AcmsAssetCard({ asset, selected, onToggle }) {
     <div
       onClick={() => onToggle(asset.id)}
       style={{
-        background: selected ? "rgba(239,68,68,0.10)" : "rgba(255,255,255,0.04)",
-        border: selected ? "1.5px solid rgba(239,68,68,0.55)" : "1.5px solid rgba(255,255,255,0.1)",
+        background: selected ? "#3f1414" : "#1e1b2e",
+        border: selected ? "1.5px solid rgba(239,68,68,0.6)" : "1.5px solid rgba(255,255,255,0.15)",
         borderRadius: 14, padding: "1rem 1.2rem", cursor: "pointer",
         transition: "all 0.2s", position: "relative",
-        boxShadow: selected ? "0 0 16px rgba(239,68,68,0.12)" : "none",
+        boxShadow: selected ? "0 0 16px rgba(239,68,68,0.2)" : "none",
       }}
     >
       <div style={{
@@ -177,16 +177,16 @@ function AcmsAssetCard({ asset, selected, onToggle }) {
         {selected && <span style={{ color: "#fff", fontSize: "0.65rem", fontWeight: 900 }}>v</span>}
       </div>
 
-      <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.95rem", color: "#e2e8f0", marginBottom: "0.3rem", paddingRight: "2rem" }}>
+      <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.95rem", color: "#f8fafc", marginBottom: "0.3rem", paddingRight: "2rem" }}>
         {asset.assetNumber || asset.serialNumber || ("ACMS-" + asset.id)}
         {asset.assetNumber && asset.serialNumber && (
-          <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 400 }}>
+          <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "#94a3b8", fontWeight: 400 }}>
             - SN: {asset.serialNumber}
           </span>
         )}
       </div>
 
-      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", gap: "0.35rem 0.75rem", marginBottom: "0.4rem" }}>
+      <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "flex", flexWrap: "wrap", gap: "0.35rem 0.75rem", marginBottom: "0.4rem" }}>
         {asset.CATEGORY && <span>Category: {asset.CATEGORY}</span>}
         {asset.make     && <span>Make: {asset.make}{asset.model ? (" " + asset.model) : ""}</span>}
         {asset.AREA     && <span>Area: {asset.AREA}</span>}
