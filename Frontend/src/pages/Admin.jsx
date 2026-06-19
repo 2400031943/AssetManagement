@@ -17,6 +17,8 @@ import PendingApprovals  from '../components/PendingApprovals';
 import WhereIsMyAsset    from '../components/WhereIsMyAsset';
 import DeleteAsset       from '../components/DeleteAsset';
 import ReadyToSend       from '../components/ReadyToSend';
+import useInactivityLogout from '../hooks/useInactivityLogout';
+import InactivityWarning from '../components/InactivityWarning';
 import './Dashboard.css';
 
 export default function Admin() {
@@ -37,6 +39,21 @@ export default function Admin() {
   const [myAssets,        setMyAssets]        = useState([]);
   const [myAssetsLoading, setMyAssetsLoading] = useState(false);
   const [error,           setError]           = useState(null);
+  const [showWarning,     setShowWarning]     = useState(false);
+
+  // ── Inactivity auto-logout ────────────────────────────────────────────────
+  const handleInactivityLogout = useCallback(() => {
+    clearStoredSession();
+    navigate('/');
+  }, [navigate]);
+
+  useInactivityLogout({
+    timeoutMs: 15 * 60 * 1000,
+    warningMs:  2 * 60 * 1000,
+    onWarn:   () => setShowWarning(true),
+    onActive: () => setShowWarning(false),
+    onLogout: handleInactivityLogout,
+  });
 
   // ── Sync user profile from remote DB (to get FUNCDESGCODE) ───────────────
   useEffect(() => {
@@ -118,6 +135,12 @@ export default function Admin() {
 
   return (
     <div className="dashboard-layout">
+      <InactivityWarning
+        visible={showWarning}
+        secondsLeft={2 * 60}
+        onStayIn={() => setShowWarning(false)}
+        onLogout={handleInactivityLogout}
+      />
       <aside className="sidebar glass-panel">
         <div className="sidebar-header">
           <Database className="dashboard-logo-icon" size={28} />

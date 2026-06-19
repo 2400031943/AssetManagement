@@ -10,6 +10,8 @@ import PendingApprovals from '../components/PendingApprovals';
 import WhereIsMyAsset from '../components/WhereIsMyAsset';
 import DeleteAsset from '../components/DeleteAsset';
 import ReadyToSend from '../components/ReadyToSend';
+import useInactivityLogout from '../hooks/useInactivityLogout';
+import InactivityWarning from '../components/InactivityWarning';
 import './Dashboard.css';
 
 export default function User() {
@@ -26,6 +28,23 @@ export default function User() {
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showWarning, setShowWarning] = useState(false);
+
+  // ── Inactivity auto-logout ────────────────────────────────────────────────
+  // 15 min total inactivity → logout. Warning shown at 13 min (2-min countdown).
+  // Any mouse/keyboard/scroll/touch resets the timer — active users are never logged out.
+  const handleInactivityLogout = useCallback(() => {
+    clearStoredSession();
+    navigate('/');
+  }, [navigate]);
+
+  useInactivityLogout({
+    timeoutMs: 15 * 60 * 1000,   // 15 minutes
+    warningMs:  2 * 60 * 1000,   //  2-minute warning before logout
+    onWarn:   () => setShowWarning(true),
+    onActive: () => setShowWarning(false),
+    onLogout: handleInactivityLogout,
+  });
 
   // Sync user profile from remote DB on mount to get FUNCDESGCODE
   useEffect(() => {
@@ -114,6 +133,12 @@ export default function User() {
 
   return (
     <div className="dashboard-layout">
+      <InactivityWarning
+        visible={showWarning}
+        secondsLeft={2 * 60}
+        onStayIn={() => setShowWarning(false)}
+        onLogout={handleInactivityLogout}
+      />
       <aside className="sidebar glass-panel">
         <div className="sidebar-header">
           <Database className="dashboard-logo-icon" size={28} />
