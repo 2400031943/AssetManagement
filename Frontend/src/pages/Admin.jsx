@@ -70,8 +70,8 @@ export default function Admin() {
     getMyAssets()
       .then(data => setMyAssets(Array.isArray(data) ? data : []))
       .catch(err => {
-        const msg = (err?.message || '').toLowerCase();
-        if (msg.includes('missing authorization') || msg.includes('unauthorized') || msg.includes('token')) {
+        if (err.isAuthError) {
+          // Genuine 401 — token expired, force re-login
           clearStoredSession(); navigate('/'); return;
         }
         setError('Failed to load your assets.');

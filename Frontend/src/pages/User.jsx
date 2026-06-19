@@ -49,8 +49,8 @@ export default function User() {
       .then(data => { setAssets(Array.isArray(data) ? data : []); })
       .catch(err => {
         console.error('Failed to load assets:', err);
-        const message = (err?.message || '').toLowerCase();
-        if (message.includes('missing authorization') || message.includes('unauthorized') || message.includes('token')) {
+        if (err.isAuthError) {
+          // Genuine 401 — token expired or invalid, force re-login
           setError('Your session has expired. Please log in again.');
           clearStoredSession();
           navigate('/');

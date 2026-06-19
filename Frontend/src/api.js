@@ -10,7 +10,7 @@ import { getStoredToken, getStoredUser } from './authSession';
  */
 
 
-const USE_MOCK = true;                     // ← flip to true for mock data
+const USE_MOCK = false;                     // ← flip to true for mock data
 const BASE_URL = 'http://localhost:5000/api'; // ← Flask backend URL
 
 // ---------------------------------------------------------------------------
@@ -31,7 +31,13 @@ async function apiFetch(path, options = {}) {
     ...options,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || data.msg || 'API error');
+  if (!res.ok) {
+    const err = new Error(data.error || data.msg || 'API error');
+    // Flag genuine auth failures (token expired / missing) so the
+    // UI can log the user out — avoids false logouts on other errors.
+    err.isAuthError = res.status === 401;
+    throw err;
+  }
   return data;
 }
 

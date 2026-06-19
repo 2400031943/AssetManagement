@@ -9,6 +9,12 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-string'
 
+    # JWT token lifetime — default flask-jwt-extended is only 15 minutes which
+    # causes users to be logged out mid-session. Set to 8 hours (full working day).
+    from datetime import timedelta
+    JWT_ACCESS_TOKEN_EXPIRES  = timedelta(hours=8)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+
     # Local MSSQL Database Connection (for App Data)
     DB_SERVER   = os.environ.get('DB_SERVER',   'localhost')
     DB_NAME     = os.environ.get('DB_NAME',     'Asset_Manager')
