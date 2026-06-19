@@ -297,8 +297,8 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
 
   return (
     <div style={{
-      background: "rgba(255,255,255,0.04)",
-      border: "1.5px solid " + accentColor + "33",
+      background: "#1e1b2e",
+      border: "1.5px solid " + accentColor + "55",
       borderRadius: 14, padding: "1rem 1.2rem", marginBottom: "1rem",
     }}>
       {/* ── Top row ── */}
@@ -319,10 +319,10 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
           <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.95rem", color: "#e2e8f0", marginBottom: "0.2rem" }}>
             {req.assetNumber || req.serialNumber || ("Request #" + req.id)}
             {req.serialNumber && req.assetNumber && (
-              <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>· SN: {req.serialNumber}</span>
+              <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "#94a3b8" }}>· SN: {req.serialNumber}</span>
             )}
           </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+          <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
             {req.category    && <span>📂 {req.category}</span>}
             {req.make        && <span>🏭 {req.make} {req.model || ""}</span>}
             {req.area        && <span>📍 {req.area}</span>}
@@ -331,14 +331,14 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
           {req.configuration && (
             <div style={{
               marginTop: "0.4rem", marginBottom: "0.2rem",
-              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
               borderRadius: 6, padding: "0.4rem 0.6rem",
             }}>
-              <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.15rem" }}>Configuration</span>
+              <span style={{ color: "#94a3b8", display: "block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.15rem" }}>Configuration</span>
               <span style={{ color: "#e2e8f0", fontWeight: 600, fontSize: "0.8rem", wordBreak: "break-word", lineHeight: 1.4 }}>{req.configuration}</span>
             </div>
           )}
-          <div style={{ marginTop: "0.3rem", fontSize: "0.73rem", color: "var(--text-muted)" }}>
+          <div style={{ marginTop: "0.3rem", fontSize: "0.73rem", color: "#94a3b8" }}>
             Requested by:{" "}
             <strong style={{ color: "#e2e8f0" }}>
               {req.requesterEmployeeName || req.requesterName || req.requesterEcno}
@@ -354,7 +354,7 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
           {req.requesterRemarks && (
             <div style={{
               marginTop: "0.5rem",
-              background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)",
+              background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
               borderRadius: 7, padding: "0.45rem 0.75rem",
               fontSize: "0.75rem", color: "#fca5a5",
             }}>
@@ -371,7 +371,7 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
             background: accentColor + "20", color: accentColor, border: "1px solid " + accentColor + "44",
             borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem", fontWeight: 700,
           }}>{STATUS_LABELS[req.status] || req.status}</span>
-          <span style={{ fontSize: "0.72rem", color: "#a5b4fc", fontWeight: 600 }}>Awaiting: {myRole}</span>
+          <span style={{ fontSize: "0.72rem", color: "#c4b5fd", fontWeight: 600 }}>Awaiting: {myRole}</span>
         </div>
       </div>
 
@@ -422,9 +422,9 @@ function AssignedCard({ req: initialReq, myRole, onAction }) {
             onClick={() => setMode("view")}
             style={{
               display: "flex", alignItems: "center", gap: "0.3rem",
-              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)",
               borderRadius: 7, padding: "3px 10px", fontSize: "0.74rem",
-              color: "var(--text-muted)", cursor: "pointer",
+              color: "#94a3b8", cursor: "pointer",
             }}
           >
             <RotateCcw size={12} /> Back to view
