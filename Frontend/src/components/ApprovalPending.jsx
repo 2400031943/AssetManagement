@@ -115,14 +115,14 @@ function RequestCard({ req, onWithdraw }) {
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-            <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem' }}>
+            <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>
               {req.assetNumber || req.serialNumber || `Request #${req.id}`}
             </span>
             {req.serialNumber && req.assetNumber && (
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>· {req.serialNumber}</span>
+              <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>· {req.serialNumber}</span>
             )}
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 500 }}>
             {req.category && <span style={{ marginRight: '0.8rem' }}>📂 {req.category}</span>}
             {req.make && <span style={{ marginRight: '0.8rem' }}>🏭 {req.make} {req.model || ''}</span>}
             {req.area && <span>📍 {req.area}</span>}
@@ -173,11 +173,11 @@ function RequestCard({ req, onWithdraw }) {
           { label: 'DD', ecno: req.ddEcno, name: req.ddName, remarks: req.ddRemarks, at: req.ddActionAt },
         ].map(lvl => lvl.ecno && (
           <span key={lvl.label} style={{
-            fontSize: '0.68rem', background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 6, padding: '2px 8px', color: 'var(--text-muted)',
+            fontSize: '0.72rem', background: 'rgba(0,0,0,0.03)',
+            border: '1px solid rgba(0,0,0,0.15)',
+            borderRadius: 6, padding: '3px 8px', color: '#475569',
           }}>
-            {lvl.label}: <strong style={{ color: '#e2e8f0' }}>{lvl.name || lvl.ecno}</strong>
+            {lvl.label}: <strong style={{ color: '#0f172a', fontWeight: 700 }}>{lvl.name || lvl.ecno}</strong>
           </span>
         ))}
       </div>
@@ -221,14 +221,14 @@ function RequestCard({ req, onWithdraw }) {
             ['Submitted On', req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-IN') : null],
           ].filter(([, v]) => v).map(([label, val]) => (
             <div key={label} style={{ fontSize: '0.75rem' }}>
-              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem' }}>{label}</span>
-              <span style={{ color: '#e2e8f0', fontWeight: 500 }}>{val}</span>
+              <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>{label}</span>
+              <span style={{ color: '#0f172a', fontWeight: 700 }}>{val}</span>
             </div>
           ))}
           {req.configuration && (
             <div style={{ fontSize: '0.75rem', gridColumn: '1 / -1' }}>
-              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem' }}>Configuration</span>
-              <span style={{ color: '#e2e8f0', fontWeight: 500, wordBreak: 'break-word' }}>{req.configuration}</span>
+              <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Configuration</span>
+              <span style={{ color: '#0f172a', fontWeight: 700, wordBreak: 'break-word' }}>{req.configuration}</span>
             </div>
           )}
         </div>
@@ -335,9 +335,9 @@ export default function ApprovalPending() {
 
       {/* Active requests */}
       {!loading && !error && active.length > 0 && (
-        <div className="glass-panel" style={{ padding: '1.2rem', marginBottom: '1.5rem' }}>
+        <div className="glass-panel" style={{ padding: '1.2rem', marginBottom: '1.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', color: '#e2e8f0' }}>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 800 }}>
               Active Requests
               <span style={{
                 marginLeft: '0.5rem', background: 'rgba(108,99,255,0.15)',
@@ -358,9 +358,9 @@ export default function ApprovalPending() {
           <button
             onClick={handleToggleWithdrawn}
             style={{
-              background: 'none', border: '1px solid rgba(255,255,255,0.12)',
+              background: 'none', border: '1px solid #cbd5e1',
               borderRadius: 8, padding: '6px 16px',
-              color: 'var(--text-muted)', fontSize: '0.8rem',
+              color: '#475569', fontSize: '0.8rem', fontWeight: 600,
               cursor: 'pointer',
             }}
           >
