@@ -1853,12 +1853,15 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.35rem',
-                  background: predicting ? 'rgba(34,197,94,0.1)' : 'linear-gradient(135deg,rgba(34,197,94,0.18),rgba(21,128,61,0.18))',
-                  border: '1.5px solid rgba(34,197,94,0.45)',
-                  color: (!formData.configuration || predicting) ? '#6b7280' : '#86efac',
+                  background: (!formData.configuration || predicting)
+                    ? '#6b7280'
+                    : 'linear-gradient(135deg, #16a34a, #15803d)',
+                  border: 'none',
+                  color: '#ffffff',
                   borderRadius: '7px', fontSize: '0.72rem', fontWeight: 700,
                   cursor: (!formData.configuration || predicting) ? 'not-allowed' : 'pointer',
-                  padding: '4px 11px', transition: 'all 0.2s',
+                  padding: '5px 13px', transition: 'all 0.2s',
+                  opacity: (!formData.configuration || predicting) ? 0.6 : 1,
                 }}
               >
                 {predicting
@@ -1992,13 +1995,15 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
                 type="button"
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.3rem',
-                  background: showCategoryGuide ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.07)',
-                  border: '1px solid rgba(34,197,94,0.35)',
-                  color: '#86efac',
+                  background: showCategoryGuide
+                    ? 'linear-gradient(135deg, #15803d, #166534)'
+                    : 'linear-gradient(135deg, #16a34a, #15803d)',
+                  border: 'none',
+                  color: '#ffffff',
                   borderRadius: '6px',
                   fontSize: '0.72rem', fontWeight: 700,
                   cursor: 'pointer',
-                  padding: '3px 10px',
+                  padding: '5px 13px',
                   transition: 'all 0.2s',
                 }}
                 onClick={() => setShowCategoryGuide(v => !v)}
