@@ -47,7 +47,7 @@ export default function Login() {
 
       const dbRole = user.role; // 'Admin' | 'AreaAdmin' | 'User'
 
-      // If "Admin" tab selected — enforce that user must have Admin role in DB
+      // ── Admin tab: only users with role=Admin in DB can proceed ──────────
       if (role === 'admin') {
         if (dbRole !== 'Admin') {
           setStatus({ type: 'error', message: 'Access denied. You do not have Admin privileges.' });
@@ -59,11 +59,9 @@ export default function Login() {
         return;
       }
 
-      // "User" tab — redirect based on actual DB role
-      if (dbRole === 'Admin') {
-        setStatus({ type: 'success', message: 'Welcome! Loading Admin dashboard…' });
-        setTimeout(() => navigate('/admin'), 600);
-      } else if (dbRole === 'AreaAdmin') {
+      // ── User tab: tab choice is always respected — never redirect to /admin
+      //    Even if DB role is Admin, User tab gives normal user access.
+      if (dbRole === 'AreaAdmin') {
         setStatus({ type: 'success', message: 'Welcome! Loading Area Admin dashboard…' });
         setTimeout(() => navigate('/area-admin'), 600);
       } else {
