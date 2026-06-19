@@ -41,8 +41,8 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
 
   const baseBox = {
     width: "100%", padding: "0.45rem 2.2rem 0.45rem 0.75rem",
-    background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.18)",
-    borderRadius: 8, color: "#e2e8f0", fontSize: "0.83rem", cursor: "pointer",
+    background: "#f8fafc", border: "1.5px solid #cbd5e1",
+    borderRadius: 8, color: "#0f172a", fontSize: "0.83rem", cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "space-between",
     position: "relative", userSelect: "none", minHeight: "2.1rem",
     transition: "border-color 0.2s",
@@ -51,53 +51,53 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
 
   return (
     <div ref={wrapRef} style={{ marginBottom: "0.85rem", position: "relative" }}>
-      <label style={{ display: "block", fontSize: "0.73rem", color: "var(--text-muted)", marginBottom: "0.28rem", fontWeight: 600, letterSpacing: "0.04em" }}>
+      <label style={{ display: "block", fontSize: "0.73rem", color: "#475569", marginBottom: "0.28rem", fontWeight: 600, letterSpacing: "0.04em" }}>
         {label}
       </label>
       <div style={baseBox} onClick={() => setOpen(v => !v)}>
         {selected ? (
           <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.8rem" }}>
-            <span style={{ fontWeight: 700, color: "#fca5a5" }}>{selected.ecno}</span>
+            <span style={{ fontWeight: 700, color: "#dc2626" }}>{selected.ecno}</span>
             {" · "}{selected.name}
           </span>
         ) : (
-          <span style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.8rem" }}>-- Select {label} --</span>
+          <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>-- Select {label} --</span>
         )}
         <span style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", display: "flex", gap: 2 }}>
           {selected && (
-            <span onClick={handleClear} title="Clear" style={{ cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: "0.75rem", padding: "0 2px" }}>x</span>
+            <span onClick={handleClear} title="Clear" style={{ cursor: "pointer", color: "#94a3b8", fontSize: "0.75rem", padding: "0 2px" }}>x</span>
           )}
-          <ChevronDown size={13} style={{ color: "rgba(255,255,255,0.4)", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+          <ChevronDown size={13} style={{ color: "#94a3b8", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
         </span>
       </div>
 
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 9999,
-          background: "#1e1b2e", border: "1.5px solid rgba(239,68,68,0.4)",
-          borderRadius: 9, boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
+          background: "#ffffff", border: "1.5px solid #ef4444",
+          borderRadius: 9, boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
           maxHeight: 240, display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
-          <div style={{ padding: "0.5rem 0.65rem", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", gap: 6 }}>
-            <Search size={13} style={{ color: "rgba(255,255,255,0.4)", flexShrink: 0 }} />
+          <div style={{ padding: "0.5rem 0.65rem", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 6 }}>
+            <Search size={13} style={{ color: "#94a3b8", flexShrink: 0 }} />
             <input
               ref={inputRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); setOpen(false); } }}
               placeholder="Search by name or EC No..."
-              style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontSize: "0.8rem" }}
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#0f172a", fontSize: "0.8rem" }}
             />
-            {query && <span onClick={() => setQuery("")} style={{ cursor: "pointer", color: "rgba(255,255,255,0.35)", fontSize: "0.75rem" }}>x</span>}
+            {query && <span onClick={() => setQuery("")} style={{ cursor: "pointer", color: "#94a3b8", fontSize: "0.75rem" }}>x</span>}
           </div>
           <div style={{ overflowY: "auto", flex: 1 }}>
             {list.length === 0 && (
-              <div style={{ padding: "0.75rem 1rem", fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", textAlign: "center" }}>
+              <div style={{ padding: "0.75rem 1rem", fontSize: "0.78rem", color: "#64748b", textAlign: "center" }}>
                 No personnel available (remote DB may be offline)
               </div>
             )}
             {filtered.length === 0 && list.length > 0 && (
-              <div style={{ padding: "0.75rem 1rem", fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", textAlign: "center" }}>
+              <div style={{ padding: "0.75rem 1rem", fontSize: "0.78rem", color: "#64748b", textAlign: "center" }}>
                 No matches for "{query}"
               </div>
             )}
@@ -107,19 +107,19 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
                 onClick={() => handleSelect(p)}
                 style={{
                   padding: "0.5rem 0.85rem", cursor: "pointer", fontSize: "0.8rem",
-                  background: selected && selected.ecno === p.ecno ? "rgba(239,68,68,0.15)" : "transparent",
+                  background: selected && selected.ecno === p.ecno ? "#fee2e2" : "transparent",
                   borderLeft: selected && selected.ecno === p.ecno ? "3px solid #ef4444" : "3px solid transparent",
                   transition: "background 0.15s", display: "flex", flexDirection: "column", gap: 2,
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
-                onMouseLeave={e => e.currentTarget.style.background = (selected && selected.ecno === p.ecno) ? "rgba(239,68,68,0.15)" : "transparent"}
+                onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"}
+                onMouseLeave={e => e.currentTarget.style.background = (selected && selected.ecno === p.ecno) ? "#fee2e2" : "transparent"}
               >
                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#fca5a5", fontSize: "0.78rem", flexShrink: 0 }}>{p.ecno}</span>
-                  <span style={{ color: "#e2e8f0", fontWeight: 600 }}>{p.name}</span>
+                  <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#dc2626", fontSize: "0.78rem", flexShrink: 0 }}>{p.ecno}</span>
+                  <span style={{ color: "#0f172a", fontWeight: 600 }}>{p.name}</span>
                 </span>
                 {(p.groupName || p.divisionName || p.sectionName) && (
-                  <span style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.32)", paddingLeft: 2, display: "flex", flexWrap: "wrap", gap: "0 6px" }}>
+                  <span style={{ fontSize: "0.68rem", color: "#64748b", paddingLeft: 2, display: "flex", flexWrap: "wrap", gap: "0 6px" }}>
                     {p.groupName    && <span>Grp: {p.groupName}</span>}
                     {p.divisionName && <span>Div: {p.divisionName}</span>}
                     {p.sectionName  && <span>Sec: {p.sectionName}</span>}
@@ -129,7 +129,7 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
             ))}
           </div>
           {list.length > 0 && (
-            <div style={{ padding: "0.3rem 0.85rem", borderTop: "1px solid rgba(255,255,255,0.07)", fontSize: "0.68rem", color: "rgba(255,255,255,0.28)" }}>
+            <div style={{ padding: "0.3rem 0.85rem", borderTop: "1px solid #e2e8f0", fontSize: "0.68rem", color: "#94a3b8" }}>
               {filtered.length} of {list.length} shown
             </div>
           )}
@@ -138,9 +138,9 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
 
       {selected && (
         <div style={{
-          marginTop: "0.4rem", background: "rgba(239,68,68,0.07)",
-          border: "1px solid rgba(239,68,68,0.2)", borderRadius: 7,
-          padding: "0.4rem 0.75rem", fontSize: "0.75rem", color: "#fca5a5",
+          marginTop: "0.4rem", background: "#fef2f2",
+          border: "1px solid #fecaca", borderRadius: 7,
+          padding: "0.4rem 0.75rem", fontSize: "0.75rem", color: "#dc2626",
           display: "flex", flexWrap: "wrap", gap: "0 0.6rem",
         }}>
           <span style={{ fontWeight: 700 }}>{selected.ecno}</span>
@@ -225,40 +225,40 @@ function ApprovalModal({ selectedAssets, approvers, registrars, dds, onClose, on
       backdropFilter: "blur(4px)",
     }}>
       <div style={{
-        background: "linear-gradient(135deg, #1a1625 0%, #12101e 100%)",
-        border: "1.5px solid rgba(239,68,68,0.3)",
+        background: "#ffffff",
+        border: "1.5px solid #fca5a5",
         borderRadius: 18, padding: "1.8rem 2rem", width: "100%", maxWidth: 480,
         maxHeight: "90vh", overflowY: "auto",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.7)",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.4rem" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-              <ShieldAlert size={20} style={{ color: "#ef4444" }} />
-              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#fca5a5" }}>
+              <ShieldAlert size={20} style={{ color: "#dc2626" }} />
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#dc2626" }}>
                 Request Deletion Approval
               </h3>
             </div>
-            <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>
+            <p style={{ margin: 0, fontSize: "0.78rem", color: "#475569" }}>
               {selectedAssets.length} asset{selectedAssets.length > 1 ? "s" : ""} selected for removal from ACMS 2027
             </p>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: 4 }}>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 4 }}>
             <X size={20} />
           </button>
         </div>
 
         <div style={{
-          background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)",
+          background: "#fef2f2", border: "1px solid #fecaca",
           borderRadius: 10, padding: "0.75rem 1rem", marginBottom: "1.4rem",
         }}>
-          <div style={{ fontSize: "0.7rem", color: "#fca5a5", fontWeight: 700, marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          <div style={{ fontSize: "0.7rem", color: "#b91c1c", fontWeight: 700, marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             Assets to be deleted
           </div>
           {selectedAssets.map(a => (
-            <div key={a.id} style={{ fontSize: "0.78rem", color: "#e2e8f0", fontFamily: "monospace", padding: "1px 0" }}>
+            <div key={a.id} style={{ fontSize: "0.78rem", color: "#0f172a", fontFamily: "monospace", padding: "1px 0" }}>
               [DEL] {a.assetNumber || a.serialNumber || ("ACMS-" + a.id)}
-              {a.make && <span style={{ color: "var(--text-muted)", fontFamily: "sans-serif" }}> - {a.make} {a.model || ""}</span>}
+              {a.make && <span style={{ color: "#64748b", fontFamily: "sans-serif" }}> - {a.make} {a.model || ""}</span>}
             </div>
           ))}
         </div>
@@ -266,10 +266,10 @@ function ApprovalModal({ selectedAssets, approvers, registrars, dds, onClose, on
         {/* Reason / Remarks — required */}
         <div style={{ marginBottom: "1.2rem" }}>
           <label style={{
-            display: "block", fontSize: "0.73rem", color: "var(--text-muted)",
+            display: "block", fontSize: "0.73rem", color: "#475569",
             marginBottom: "0.28rem", fontWeight: 600, letterSpacing: "0.04em",
           }}>
-            Reason for Deletion <span style={{ color: "#ef4444" }}>*</span>
+            Reason for Deletion <span style={{ color: "#dc2626" }}>*</span>
           </label>
           <textarea
             value={remarks}
@@ -278,9 +278,9 @@ function ApprovalModal({ selectedAssets, approvers, registrars, dds, onClose, on
             rows={3}
             style={{
               width: "100%", padding: "0.6rem 0.75rem",
-              background: "rgba(255,255,255,0.06)",
-              border: `1.5px solid ${remarks.trim().length > 0 && !remarksOk ? "#ef4444" : remarks.trim().length >= 10 ? "rgba(34,197,94,0.5)" : "rgba(255,255,255,0.15)"}`,
-              borderRadius: 8, color: "#e2e8f0", fontSize: "0.82rem",
+              background: "#f8fafc",
+              border: `1.5px solid ${remarks.trim().length > 0 && !remarksOk ? "#ef4444" : remarks.trim().length >= 10 ? "#22c55e" : "#cbd5e1"}`,
+              borderRadius: 8, color: "#0f172a", fontSize: "0.82rem",
               resize: "vertical", outline: "none", fontFamily: "inherit",
               transition: "border-color 0.2s", boxSizing: "border-box",
               lineHeight: 1.5,
@@ -290,10 +290,10 @@ function ApprovalModal({ selectedAssets, approvers, registrars, dds, onClose, on
             display: "flex", justifyContent: "space-between",
             marginTop: "0.25rem", fontSize: "0.68rem",
           }}>
-            <span style={{ color: remarks.trim().length > 0 && !remarksOk ? "#fca5a5" : "var(--text-muted)" }}>
+            <span style={{ color: remarks.trim().length > 0 && !remarksOk ? "#dc2626" : "#64748b" }}>
               {remarks.trim().length > 0 && !remarksOk ? "Minimum 10 characters required" : "Be specific — this will be visible to all approvers"}
             </span>
-            <span style={{ color: remarksOk ? "rgba(34,197,94,0.8)" : "var(--text-muted)" }}>
+            <span style={{ color: remarksOk ? "#16a34a" : "#94a3b8" }}>
               {remarks.trim().length} chars
             </span>
           </div>
@@ -304,9 +304,9 @@ function ApprovalModal({ selectedAssets, approvers, registrars, dds, onClose, on
         <SearchablePersonSelect label="DD"               list={dds}        selected={dd}        setter={setDD}        />
 
         <div style={{
-          background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)",
+          background: "#fef2f2", border: "1px solid #fecaca",
           borderRadius: 8, padding: "0.6rem 0.9rem", marginBottom: "1.2rem",
-          fontSize: "0.73rem", color: "#fca5a5", display: "flex", gap: "0.5rem", alignItems: "flex-start",
+          fontSize: "0.73rem", color: "#b91c1c", display: "flex", gap: "0.5rem", alignItems: "flex-start",
         }}>
           <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
           <span>Once approved by all 4 levels (Approver, AFP, DD, Admin), the asset will be permanently removed from the ACMS 2027 list.</span>
@@ -318,8 +318,8 @@ function ApprovalModal({ selectedAssets, approvers, registrars, dds, onClose, on
             disabled={submitting}
             style={{
               flex: 1, padding: "0.65rem", borderRadius: 9, cursor: "pointer",
-              background: "rgba(255,255,255,0.06)", border: "1.5px solid rgba(255,255,255,0.12)",
-              color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600,
+              background: "#f8fafc", border: "1.5px solid #cbd5e1",
+              color: "#475569", fontSize: "0.85rem", fontWeight: 600,
             }}
           >
             Cancel
