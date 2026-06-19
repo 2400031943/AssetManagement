@@ -115,52 +115,59 @@ def fetch_employee_profile(emp_code):
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """Authenticate a user via PIS Stored Procedure and return a JWT token."""
+    """Authenticate a user via PIS Stored Procedure and return a JWT token.
+    
+    Priority order:
+      1. If the user exists locally with a password_hash set → authenticate locally
+         (covers test users created by create_test_users.py, always works)
+      2. Otherwise → verify via PIS Stored Procedure (SPES_SLOGINCHECK)
+      3. If PIS is unreachable → reject (no local password set to fall back to)
+    """
     data     = request.get_json()
     emp_code = data.get('emp_code', '').strip().upper()
     password = data.get('password', '')
 
-    pis_verified = False
+    pis_verified         = False
     remote_pis_available = False
 
-    # 1. Try to verify via PIS Stored Procedure
-    try:
-        # The procedure takes both username and password
-        # EXEC SPES_SLOGINCHECK 'NR1234', 'secret'
-        engine = db.engines['remote_pis']
-        with engine.connect() as conn:
-            remote_pis_available = True
-            result = conn.execute(
-                text("EXEC SPES_SLOGINCHECK :u, :p"), 
-                {"u": emp_code, "p": password}
-            )
-            row = result.fetchone()
-            
-        # The procedure returns 1 for success, 0 for failure
-        if row and str(row[0]) == '1':
-            pis_verified = True
-        else:
-            return jsonify({"error": "Invalid credentials or user not found in PIS system"}), 401
-
-    except Exception as e:
-        # Fallback if cowmis is unreachable
-        print(f"PIS Stored Procedure failed: {e}")
-
-        # Fallback to local database password check
-        user = User.query.filter_by(emp_code=emp_code).first()
-        if not user:
-            return jsonify({"error": "User not found. Set a local password first via /api/debug/set-password"}), 401
-        if not user.password_hash:
-            return jsonify({"error": "No local password set. Call /api/debug/set-password to set one."}), 401
-        if not user.check_password(password):
-            return jsonify({"error": "Invalid local password"}), 401
+    # ── Step 1: Check for a locally stored password first ────────────────────
+    # This handles test accounts (create_test_users.py) and works regardless
+    # of whether the remote PIS system is reachable.
+    local_user = User.query.filter_by(emp_code=emp_code).first()
+    if local_user and local_user.password_hash:
+        if not local_user.check_password(password):
+            return jsonify({"error": "Invalid credentials"}), 401
+        # Local password matched — skip PIS entirely
         pis_verified = True
+        print(f"[INFO] Login: local password auth succeeded for {emp_code}")
 
-    # 2. If verified (via PIS or fallback), ensure user exists locally
+    # ── Step 2: If no local password, verify via PIS Stored Procedure ────────
+    if not pis_verified:
+        try:
+            engine = db.engines['remote_pis']
+            with engine.connect() as conn:
+                remote_pis_available = True
+                result = conn.execute(
+                    text("EXEC SPES_SLOGINCHECK :u, :p"),
+                    {"u": emp_code, "p": password}
+                )
+                row = result.fetchone()
+
+            if row and str(row[0]) == '1':
+                pis_verified = True
+                print(f"[INFO] Login: PIS auth succeeded for {emp_code}")
+            else:
+                return jsonify({"error": "Invalid credentials or user not found in PIS system"}), 401
+
+        except Exception as e:
+            print(f"[WARN] PIS Stored Procedure unreachable: {e}")
+            # Remote DB is offline and no local password exists
+            return jsonify({"error": "Authentication service unavailable. Contact administrator."}), 503
+
+    # ── Step 3: Auth succeeded — ensure user record exists locally ───────────
     if pis_verified:
         user = User.query.filter_by(emp_code=emp_code).first()
         if not user:
-            # Auto-create the user locally so we can assign assets to them
             user = User(username=emp_code, emp_code=emp_code, role='User')
             db.session.add(user)
             db.session.commit()
@@ -175,8 +182,9 @@ def login():
         token = create_access_token(identity=str(user.id))
         return jsonify({
             "token": token,
-            "user": user_payload
+            "user":  user_payload
         }), 200
+
 
 
 @auth_bp.route('/me', methods=['GET'])
