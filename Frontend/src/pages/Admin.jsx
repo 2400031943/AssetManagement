@@ -31,7 +31,7 @@ export default function Admin() {
   const footerCode        = currentUser.employeeCode        || currentUser.EMPLOYEECODE  || currentUser.emp_code || employeeCode;
   const footerDesignation = currentUser.employeeDesignation || currentUser.DESGFULLNAME  || '';
 
-  const [activeTab,       setActiveTab]       = useState('my-assets');
+  const [activeTab,       setActiveTab]       = useState('pending-approvals');
   const [selectedUserId,  setSelectedUserId]  = useState(null);
   const [loading,         setLoading]         = useState(true);
   const [users,           setUsers]           = useState([]);
@@ -151,20 +151,6 @@ export default function Admin() {
         </div>
 
         <nav className="sidebar-nav">
-
-          {/* ── Admin-exclusive section ─────────────────────────── */}
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', padding: '0.5rem 0.75rem 0.25rem', textTransform: 'uppercase' }}>
-            Admin
-          </div>
-          <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => handleTabChange('dashboard')}>
-            <Activity size={20} /><span>Overview</span>
-          </button>
-          <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => handleTabChange('users')}>
-            <Users size={20} /><span>Manage Users</span>
-          </button>
-          <button className={`nav-item ${activeTab === 'all-assets' && !selectedUserId ? 'active' : ''}`} onClick={() => handleTabChange('all-assets')}>
-            <Monitor size={20} /><span>All Assets</span>
-          </button>
 
           {/* ── Same as User section ────────────────────────────── */}
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', padding: '0.75rem 0.75rem 0.25rem', textTransform: 'uppercase', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.5rem' }}>
