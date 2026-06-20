@@ -1672,7 +1672,28 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
           {/* Asset Number */}
           <div className="form-group">
             <label>Asset Number *</label>
-            <input type="text" name="assetNumber" value={formData.assetNumber} onChange={handleChange} required className="login-input" placeholder="Enter Asset Number" />
+            <input
+              type="text"
+              name="assetNumber"
+              value={formData.assetNumber}
+              onChange={activeTabMode === 'coins-recommendations' ? undefined : handleChange}
+              readOnly={activeTabMode === 'coins-recommendations'}
+              required
+              className="login-input"
+              placeholder={activeTabMode === 'coins-recommendations' ? 'Auto-filled from COINS' : 'Enter Asset Number'}
+              title={activeTabMode === 'coins-recommendations' ? 'Asset Number is auto-filled from COINS and cannot be edited' : ''}
+              style={activeTabMode === 'coins-recommendations' ? {
+                background: 'rgba(255,255,255,0.04)',
+                color: '#94a3b8',
+                cursor: 'not-allowed',
+                border: '1.5px solid rgba(255,255,255,0.08)',
+              } : {}}
+            />
+            {activeTabMode === 'coins-recommendations' && (
+              <span style={{ fontSize: '0.7rem', color: '#6c63ff', marginTop: '0.2rem', display: 'block' }}>
+                🔒 Auto-filled from COINS — not editable
+              </span>
+            )}
           </div>
 
           {/* Serial Number */}
