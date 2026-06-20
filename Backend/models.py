@@ -204,6 +204,11 @@ class PendingRequest(db.Model):
     approver_name        = db.Column(db.String(100), nullable=True)
     approver_remarks     = db.Column(db.Text,        nullable=True)
     approver_action_at   = db.Column(db.DateTime,    nullable=True)
+    # Level 1b — Optional 2nd Approver (selected by requester)
+    approver2_ecno       = db.Column(db.String(50),  nullable=True)
+    approver2_name       = db.Column(db.String(100), nullable=True)
+    approver2_remarks    = db.Column(db.Text,        nullable=True)
+    approver2_action_at  = db.Column(db.DateTime,    nullable=True)
     # Level 2 — Area Focal Point (auto-assigned by division/area)
     registrar_ecno       = db.Column(db.String(50),  nullable=True)
     registrar_name       = db.Column(db.String(100), nullable=True)
@@ -253,6 +258,10 @@ class PendingRequest(db.Model):
             'approverName':      self.approver_name,
             'approverRemarks':   self.approver_remarks,
             'approverActionAt':  self.approver_action_at.isoformat() if self.approver_action_at else None,
+            'approver2Ecno':     self.approver2_ecno,
+            'approver2Name':     self.approver2_name,
+            'approver2Remarks':  self.approver2_remarks,
+            'approver2ActionAt': self.approver2_action_at.isoformat() if self.approver2_action_at else None,
             'registrarEcno':     self.registrar_ecno,
             'registrarName':     self.registrar_name,
             'registrarRemarks':  self.registrar_remarks,

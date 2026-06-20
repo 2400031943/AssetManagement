@@ -714,7 +714,8 @@ def create_app(config_class=Config):
         if not draft_ids:
             return jsonify({'error': 'No draft IDs provided.'}), 400
 
-        approver_ecno  = (data.get('approverEcno') or '').strip()
+        approver_ecno  = (data.get('approverEcno')  or '').strip()
+        approver2_ecno = (data.get('approver2Ecno') or '').strip()
         registrar_ecno = (data.get('registrarEcno') or '').strip()
         dd_ecno        = (data.get('ddEcno') or '').strip()
 
@@ -738,6 +739,8 @@ def create_app(config_class=Config):
             pr.current_level     = 1
             pr.approver_ecno     = approver_ecno
             pr.approver_name     = data.get('approverName')
+            pr.approver2_ecno    = approver2_ecno or None
+            pr.approver2_name    = data.get('approver2Name') or None
             pr.registrar_ecno    = registrar_ecno
             pr.registrar_name    = data.get('registrarName')
             pr.dd_ecno           = dd_ecno

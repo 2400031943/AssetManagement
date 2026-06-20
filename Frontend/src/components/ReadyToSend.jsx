@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Send, Loader2, ChevronDown } from "lucide-react";
+import { Send, Loader2, ChevronDown, Plus, X } from "lucide-react";
 import {
   getDraftRequests,
   submitPendingRequests,
@@ -126,6 +126,8 @@ export default function ReadyToSend() {
   const [ddsList,           setDdsList]           = useState([]);
   const [dropdownsLoading,  setDropdownsLoading]  = useState(false);
   const [selectedApprover,  setSelectedApprover]  = useState(null);
+  const [showApprover2,     setShowApprover2]     = useState(false);
+  const [selectedApprover2, setSelectedApprover2] = useState(null);
   const [selectedRegistrar, setSelectedRegistrar] = useState(null);
   const [selectedDD,        setSelectedDD]        = useState(null);
   const [sendingForApproval,setSendingForApproval]= useState(false);
@@ -174,20 +176,24 @@ export default function ReadyToSend() {
     setSendResult(null);
     try {
       const res = await submitPendingRequests({
-        draftIds:             Array.from(selectedDraftIds),
-        approverEcno:         selectedApprover.ecno,
-        approverName:         selectedApprover.name,
-        approverDesignation:  selectedApprover.designation,
-        registrarEcno:        selectedRegistrar.ecno,
-        registrarName:        selectedRegistrar.name,
-        registrarDesignation: selectedRegistrar.designation,
-        ddEcno:               selectedDD.ecno,
-        ddName:               selectedDD.name,
-        ddDesignation:        selectedDD.designation,
+        draftIds:              Array.from(selectedDraftIds),
+        approverEcno:          selectedApprover.ecno,
+        approverName:          selectedApprover.name,
+        approverDesignation:   selectedApprover.designation,
+        approver2Ecno:         selectedApprover2?.ecno  || '',
+        approver2Name:         selectedApprover2?.name  || '',
+        registrarEcno:         selectedRegistrar.ecno,
+        registrarName:         selectedRegistrar.name,
+        registrarDesignation:  selectedRegistrar.designation,
+        ddEcno:                selectedDD.ecno,
+        ddName:                selectedDD.name,
+        ddDesignation:         selectedDD.designation,
       });
       setSendResult({ success: true, message: res.message || "Sent for approval!" });
       setSelectedDraftIds(new Set());
-      setSelectedApprover(null); setSelectedRegistrar(null); setSelectedDD(null);
+      setSelectedApprover(null); setSelectedApprover2(null);
+      setShowApprover2(false);
+      setSelectedRegistrar(null); setSelectedDD(null);
       fetchDrafts();
     } catch (err) {
       setSendResult({ success: false, message: err.message || "Failed to send." });
@@ -318,13 +324,76 @@ export default function ReadyToSend() {
                 <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Loading personnel...
               </div>
             )}
-            {!dropdownsLoading && [
-              { label: "Approver",            list: approversList,  selected: selectedApprover,  setter: setSelectedApprover  },
-              { label: "Area Focal Point",     list: registrarsList, selected: selectedRegistrar, setter: setSelectedRegistrar },
-              { label: "Deputy Director (DD)", list: ddsList,        selected: selectedDD,        setter: setSelectedDD        },
-            ].map(({ label, list, selected, setter }) => (
-              <SearchablePersonSelect key={label} label={label} list={list} selected={selected} setter={setter} />
-            ))}
+            {!dropdownsLoading && (
+              <div>
+                {/* Approver 1 row with + button */}
+                <div style={{ position: 'relative', marginBottom: '0.1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.28rem' }}>
+                    <label style={{ fontSize: '0.73rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.04em' }}>
+                      Approver
+                    </label>
+                    {!showApprover2 ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowApprover2(true)}
+                        title="Add a 2nd Approver"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.25rem',
+                          background: 'rgba(108,99,255,0.15)', border: '1px solid rgba(108,99,255,0.4)',
+                          borderRadius: 6, padding: '2px 9px', cursor: 'pointer',
+                          color: '#a5b4fc', fontSize: '0.7rem', fontWeight: 700,
+                        }}
+                      >
+                        <Plus size={11} /> Add 2nd Approver
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setShowApprover2(false); setSelectedApprover2(null); }}
+                        title="Remove 2nd Approver"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.25rem',
+                          background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+                          borderRadius: 6, padding: '2px 9px', cursor: 'pointer',
+                          color: '#fca5a5', fontSize: '0.7rem', fontWeight: 700,
+                        }}
+                      >
+                        <X size={11} /> Remove 2nd Approver
+                      </button>
+                    )}
+                  </div>
+                  <SearchablePersonSelect
+                    label=""
+                    list={approversList}
+                    selected={selectedApprover}
+                    setter={setSelectedApprover}
+                  />
+                </div>
+
+                {/* 2nd Approver (optional) */}
+                {showApprover2 && (
+                  <div style={{
+                    marginBottom: '0.75rem',
+                    paddingLeft: '0.75rem',
+                    borderLeft: '2px solid rgba(108,99,255,0.35)',
+                  }}>
+                    <label style={{ display: 'block', fontSize: '0.73rem', color: '#a5b4fc', fontWeight: 600, letterSpacing: '0.04em', marginBottom: '0.28rem' }}>
+                      2nd Approver <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span>
+                    </label>
+                    <SearchablePersonSelect
+                      label=""
+                      list={approversList}
+                      selected={selectedApprover2}
+                      setter={setSelectedApprover2}
+                    />
+                  </div>
+                )}
+
+                {/* Area Focal Point and DD */}
+                <SearchablePersonSelect label="Area Focal Point"     list={registrarsList} selected={selectedRegistrar} setter={setSelectedRegistrar} />
+                <SearchablePersonSelect label="Deputy Director (DD)" list={ddsList}        selected={selectedDD}        setter={setSelectedDD}        />
+              </div>
+            )}
             <button
               onClick={handleSendForApproval}
               disabled={sendingForApproval || !selectedApprover || !selectedRegistrar || !selectedDD}
