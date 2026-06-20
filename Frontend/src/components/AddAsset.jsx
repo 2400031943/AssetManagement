@@ -1892,6 +1892,32 @@ export default function AddAsset({ onAddAsset, onUpdateAsset, onSuccess, activeT
               </button>
             </div>
 
+            {/* Read-only preview of current value */}
+            {formData.configuration && (
+              <div style={{
+                marginBottom: '0.6rem',
+                padding: '0.6rem 0.85rem',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8,
+                fontSize: '0.78rem',
+                color: '#94a3b8',
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                userSelect: 'none',
+              }}>
+                <span style={{
+                  display: 'block', fontSize: '0.65rem', fontWeight: 700,
+                  color: '#6c63ff', textTransform: 'uppercase', letterSpacing: '0.06em',
+                  marginBottom: '0.3rem',
+                }}>
+                  📋 Current Value
+                </span>
+                {formData.configuration}
+              </div>
+            )}
+
             <textarea
               name="configuration"
               value={formData.configuration}
