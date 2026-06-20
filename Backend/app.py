@@ -455,6 +455,8 @@ def create_app(config_class=Config):
         (for EMPLOYEENAME, GROUPFULLNAME, DIVNFULLNAME, SECTIONFULLNAME)
         from the remote cowmis DB.
 
+        func_codes: tuple/list of FUNCDESGCODE integers to filter by.
+                    Pass None to return all personnel.
         Returns [] gracefully if the remote DB is unreachable or the query fails.
         """
         remote_engine = db.engines.get('remote_pis')
@@ -462,7 +464,14 @@ def create_app(config_class=Config):
             print('[WARN] remote_pis engine not configured — cannot fetch personnel')
             return []
 
-        query = text("""
+        # Build optional FUNCDESGCODE filter
+        if func_codes:
+            codes_str = ', '.join(str(c) for c in func_codes)
+            func_filter = f"AND CAST(e.FUNCDESGCODE AS INT) IN ({codes_str})"
+        else:
+            func_filter = ''
+
+        query = text(f"""
             SELECT DISTINCT
                 LTRIM(RTRIM(CAST(e.EMPLOYEECODE    AS NVARCHAR(50))))   AS ecno,
                 LTRIM(RTRIM(CAST(v.EMPLOYEENAME    AS NVARCHAR(200))))  AS name,
@@ -474,6 +483,7 @@ def create_app(config_class=Config):
                 ON LTRIM(RTRIM(CAST(v.EMPLOYEECODE AS NVARCHAR(50))))
                  = LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50))))
             WHERE LTRIM(RTRIM(CAST(e.EMPLOYEECODE AS NVARCHAR(50)))) <> ''
+            {func_filter}
             ORDER BY name, ecno
         """)
 
@@ -496,7 +506,8 @@ def create_app(config_class=Config):
                     'sectionName':  (row.get('section_name')  or '').strip(),
                 })
 
-            print(f'[INFO] _fetch_personnel_from_remote (TBAD_EMPFUNCDESG_VIEW + VIEWEMPINFO): {len(result)} records')
+            codes_label = str(func_codes) if func_codes else 'ALL'
+            print(f'[INFO] _fetch_personnel_from_remote (FUNCDESGCODE={codes_label}): {len(result)} records')
             return result
 
         except Exception as e:
@@ -527,10 +538,10 @@ def create_app(config_class=Config):
     @jwt_required()
     def get_dds():
         """
-        Return all employees from TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO
-        for the Deputy Director dropdown.
+        Return only employees with FUNCDESGCODE = 40 (Deputy Directors)
+        for the DD dropdown.
         """
-        return jsonify(_fetch_personnel_from_remote()), 200
+        return jsonify(_fetch_personnel_from_remote(func_codes=(DD_FUNC_CODE,))), 200
 
     @app.route('/api/assets/admins', methods=['GET'])
     @jwt_required()
