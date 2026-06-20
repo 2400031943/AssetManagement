@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Send, Loader2, ChevronDown, Plus, X } from "lucide-react";
+import { Send, Loader2, ChevronDown, Plus, X, MapPin, User } from "lucide-react";
 import {
   getDraftRequests,
   submitPendingRequests,
   getApprovers,
   getRegistrars,
+  getAreaFocalPoints,
   getDDs,
 } from "../api";
 import "../pages/Dashboard.css";
@@ -117,12 +118,143 @@ function SearchablePersonSelect({ label, list, selected, setter }) {
   );
 }
 
+// ── Area Focal Point card selector ───────────────────────────────────────────
+function AreaFocalPointSelector({ afpList, afpLoading, registrarsList, selected, setter }) {
+  const [showFallback, setShowFallback] = React.useState(false);
+
+  // Group cards by area
+  const grouped = afpList.reduce((acc, p) => {
+    const area = p.area || 'Other';
+    if (!acc[area]) acc[area] = [];
+    acc[area].push(p);
+    return acc;
+  }, {});
+
+  const handleCardClick = (person) => {
+    setter(person);
+    setShowFallback(false);
+  };
+
+  const handleClear = () => setter(null);
+
+  return (
+    <div style={{ marginBottom: '0.75rem' }}>
+      <label style={{ display: 'block', fontSize: '0.73rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+        Area Focal Point
+      </label>
+
+      {/* Selected badge */}
+      {selected && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.6rem',
+          background: 'rgba(34,197,94,0.1)', border: '1.5px solid rgba(34,197,94,0.4)',
+          borderRadius: 8, padding: '0.5rem 0.85rem', marginBottom: '0.6rem',
+        }}>
+          <User size={14} style={{ color: '#22c55e', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 700, color: '#4ade80', fontFamily: 'monospace', fontSize: '0.85rem' }}>{selected.ecno}</span>
+            {selected.name && <span style={{ color: '#e2e8f0', marginLeft: 6, fontSize: '0.82rem' }}>{selected.name}</span>}
+            {selected.area && <span style={{ color: '#86efac', marginLeft: 6, fontSize: '0.72rem' }}>· {selected.area}</span>}
+          </div>
+          <button onClick={handleClear} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 2px', fontSize: '0.8rem' }}>✕ Clear</button>
+        </div>
+      )}
+
+      {afpLoading ? (
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0' }}>
+          <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Loading focal points…
+        </div>
+      ) : (
+        <div style={{
+          background: 'rgba(255,255,255,0.03)', border: '1.5px solid rgba(108,99,255,0.25)',
+          borderRadius: 10, padding: '0.75rem', maxHeight: 320, overflowY: 'auto',
+        }}>
+          {/* Fallback button at top */}
+          <div style={{ marginBottom: '0.75rem' }}>
+            {!showFallback ? (
+              <button
+                type="button"
+                onClick={() => setShowFallback(true)}
+                style={{
+                  width: '100%', background: 'rgba(245,158,11,0.08)',
+                  border: '1.5px dashed rgba(245,158,11,0.45)',
+                  borderRadius: 8, padding: '0.5rem 0.8rem',
+                  color: '#fbbf24', fontSize: '0.78rem', fontWeight: 700,
+                  cursor: 'pointer', textAlign: 'left',
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                }}
+              >
+                <MapPin size={13} /> My Area Focal Point is not in this list
+              </button>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 700 }}>Search all employees</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowFallback(false)}
+                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }}
+                  >
+                    ✕ Back to list
+                  </button>
+                </div>
+                <SearchablePersonSelect label="" list={registrarsList} selected={selected} setter={setter} />
+              </div>
+            )}
+          </div>
+
+          {/* Grouped AFP cards */}
+          {!showFallback && Object.entries(grouped).map(([area, people]) => (
+            <div key={area} style={{ marginBottom: '0.65rem' }}>
+              <div style={{
+                fontSize: '0.62rem', fontWeight: 800, color: '#a5b4fc',
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+                marginBottom: '0.3rem', paddingBottom: '0.2rem',
+                borderBottom: '1px solid rgba(165,180,252,0.15)',
+              }}>
+                <MapPin size={10} style={{ marginRight: 3, verticalAlign: 'middle' }} />{area}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {people.map((p) => {
+                  const isSelected = selected && selected.ecno === p.ecno;
+                  return (
+                    <div
+                      key={p.ecno}
+                      onClick={() => handleCardClick(p)}
+                      style={{
+                        background: isSelected ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.05)',
+                        border: `1.5px solid ${isSelected ? 'rgba(34,197,94,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: 8, padding: '0.4rem 0.65rem',
+                        cursor: 'pointer', transition: 'all 0.18s',
+                        minWidth: 120,
+                      }}
+                      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(108,99,255,0.15)'; e.currentTarget.style.borderColor = 'rgba(108,99,255,0.4)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isSelected ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = isSelected ? 'rgba(34,197,94,0.5)' : 'rgba(255,255,255,0.1)'; }}
+                    >
+                      <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.78rem', color: isSelected ? '#4ade80' : '#c4b5fd' }}>{p.ecno}</div>
+                      <div style={{ fontSize: '0.72rem', color: isSelected ? '#bbf7d0' : '#94a3b8', marginTop: '0.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+                        {p.name || <span style={{ opacity: 0.45 }}>—</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ReadyToSend() {
   const [drafts,            setDrafts]            = useState([]);
   const [draftsLoading,     setDraftsLoading]     = useState(true);
   const [selectedDraftIds,  setSelectedDraftIds]  = useState(new Set());
   const [approversList,     setApproversList]     = useState([]);
   const [registrarsList,    setRegistrarsList]    = useState([]);
+  const [afpList,           setAfpList]           = useState([]);
+  const [afpLoading,        setAfpLoading]        = useState(false);
   const [ddsList,           setDdsList]           = useState([]);
   const [dropdownsLoading,  setDropdownsLoading]  = useState(false);
   const [selectedApprover,  setSelectedApprover]  = useState(null);
@@ -145,6 +277,7 @@ export default function ReadyToSend() {
 
   useEffect(() => {
     setDropdownsLoading(true);
+    setAfpLoading(true);
     Promise.all([getApprovers(), getRegistrars(), getDDs()])
       .then(([a, r, d]) => {
         setApproversList(Array.isArray(a) ? a : []);
@@ -153,6 +286,10 @@ export default function ReadyToSend() {
       })
       .catch(() => {})
       .finally(() => setDropdownsLoading(false));
+    getAreaFocalPoints()
+      .then(data => setAfpList(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setAfpLoading(false));
   }, []);
 
   const toggleDraft = (id) => {
@@ -389,9 +526,15 @@ export default function ReadyToSend() {
                   </div>
                 )}
 
-                {/* Area Focal Point and DD */}
-                <SearchablePersonSelect label="Area Focal Point"     list={registrarsList} selected={selectedRegistrar} setter={setSelectedRegistrar} />
-                <SearchablePersonSelect label="Deputy Director (DD)" list={ddsList}        selected={selectedDD}        setter={setSelectedDD}        />
+                {/* Area Focal Point — card selector */}
+                <AreaFocalPointSelector
+                  afpList={afpList}
+                  afpLoading={afpLoading}
+                  registrarsList={registrarsList}
+                  selected={selectedRegistrar}
+                  setter={setSelectedRegistrar}
+                />
+                <SearchablePersonSelect label="Deputy Director (DD)" list={ddsList} selected={selectedDD} setter={setSelectedDD} />
               </div>
             )}
             <button

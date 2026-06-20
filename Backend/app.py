@@ -530,9 +530,68 @@ def create_app(config_class=Config):
     def get_registrars():
         """
         Return all employees from TBAD_EMPFUNCDESG_VIEW joined VIEWEMPINFO
-        for the Area Focal Point dropdown.
+        for the Area Focal Point dropdown (fallback search bar).
         """
         return jsonify(_fetch_personnel_from_remote()), 200
+
+    # Hardcoded AFP (Area Focal Point) roster with their areas
+    AFP_ROSTER = [
+        {'ecno': 'NR01744', 'area': 'BG/BS'},
+        {'ecno': 'NR01739', 'area': 'RSA'},
+        {'ecno': 'NR01824', 'area': 'ASDM'},
+        {'ecno': 'NR01577', 'area': 'ADMIN AREA (AA)'},
+        {'ecno': 'NR01849', 'area': 'MSA'},
+        {'ecno': 'NR01300', 'area': 'MSA'},
+        {'ecno': 'NR02389', 'area': 'MSA'},
+        {'ecno': 'NR01889', 'area': 'ECSA'},
+        {'ecno': 'NR02268', 'area': 'DPA'},
+        {'ecno': 'NR01640', 'area': 'SDRISA'},
+        {'ecno': 'NR02273', 'area': 'REGIONAL CENTRES(RC)'},
+        {'ecno': 'NR01999', 'area': 'REGIONAL CENTRES(RC)'},
+        {'ecno': 'NR02361', 'area': 'REGIONAL CENTRES(RC)'},
+        {'ecno': 'NR01845', 'area': 'REGIONAL CENTRES(RC)'},
+        {'ecno': 'NR02344', 'area': 'REGIONAL CENTRES(RC)'},
+        {'ecno': 'NR01985', 'area': 'REGIONAL CENTRES(RC)'},
+        {'ecno': 'NR01888', 'area': 'REGIONAL CENTRES(RC)'},
+    ]
+
+    @app.route('/api/assets/area-focal-points', methods=['GET'])
+    @jwt_required()
+    def get_area_focal_points():
+        """
+        Return the hardcoded AFP roster with names fetched from VIEWEMPINFO.
+        """
+        remote_engine = db.engines.get('remote_pis')
+        # Build name lookup from remote DB
+        name_map = {}
+        if remote_engine:
+            try:
+                ecno_list = [r['ecno'] for r in AFP_ROSTER]
+                placeholders = ', '.join(f"'{e}'" for e in ecno_list)
+                query = text(f"""
+                    SELECT
+                        LTRIM(RTRIM(CAST(EMPLOYEECODE AS NVARCHAR(50))))  AS ecno,
+                        LTRIM(RTRIM(CAST(EMPLOYEENAME AS NVARCHAR(200)))) AS name
+                    FROM VIEWEMPINFO
+                    WHERE LTRIM(RTRIM(CAST(EMPLOYEECODE AS NVARCHAR(50)))) IN ({placeholders})
+                """)
+                with remote_engine.connect() as conn:
+                    rows = conn.execute(query).mappings().all()
+                for row in rows:
+                    ec = (row.get('ecno') or '').strip().upper()
+                    name_map[ec] = (row.get('name') or '').strip()
+            except Exception as e:
+                print(f'[WARN] Could not fetch AFP names from VIEWEMPINFO: {e}')
+
+        result = []
+        for entry in AFP_ROSTER:
+            ecno = entry['ecno'].upper()
+            result.append({
+                'ecno':  ecno,
+                'name':  name_map.get(ecno, ''),
+                'area':  entry['area'],
+            })
+        return jsonify(result), 200
 
     @app.route('/api/assets/dds', methods=['GET'])
     @jwt_required()

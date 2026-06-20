@@ -343,6 +343,11 @@ export async function getRegistrars() {
   return apiFetch('/assets/registrars');
 }
 
+/** Fetch the hardcoded AFP roster with names from VIEWEMPINFO. */
+export async function getAreaFocalPoints() {
+  return apiFetch('/assets/area-focal-points');
+}
+
 /** Fetch the list of available Deputy Directors. Always fetches from real remote DB. */
 export async function getDDs() {
   return apiFetch('/assets/dds');
